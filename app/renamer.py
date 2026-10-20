@@ -136,6 +136,9 @@ def apply(item, settings, companions=()):
                 extras.append({"src": c["path"], "dst": cdst, "action": cused})
             except OSError:
                 pass
+    if used == "move":
+        # Leere Paketordner im Download-Ordner aufräumen (der Download-Ordner selbst bleibt)
+        _remove_empty_dirs(src, settings.get("input_dirs") or [])
     parsed, info = item.get("parsed") or {}, item.get("match") or {}
     kind = "movie" if info.get("type") == "movie" else ("anime" if parsed.get("anime") or info.get("is_anime") else "series")
     hid = db.add_history(used, src, dst, kind, info.get("title"), extras)
