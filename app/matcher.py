@@ -3,7 +3,7 @@ import difflib
 import re
 import unicodedata
 
-from . import tmdb
+from . import config, tmdb
 
 ANIMATION_GENRE = 16
 
@@ -27,7 +27,7 @@ def similarity(a, b):
 
 
 def score(parsed, cand):
-    sim = max(similarity(parsed["title"], cand.get("title")), similarity(parsed["title"], cand.get("original_title")))
+    sim = max(similarity(parsed["title"], t) for t in (cand.get("title"), cand.get("original_title"), cand.get("en_title")))
     s = sim
     if parsed.get("year") and cand.get("year"):
         diff = abs(parsed["year"] - cand["year"])
@@ -49,11 +49,22 @@ def _queries(title):
 def find_candidates(parsed):
     kind = "movie" if parsed["kind"] == "movie" else "tv"
     search = tmdb.search_movie if kind == "movie" else tmdb.search_tv
+    # Dateinamen tragen oft den englischen Titel, TMDB liefert aber den deutschen:
+    # zusätzlich auf Englisch suchen und den englischen Titel mitvergleichen.
+    lang = config.get().get("language") or "de-DE"
+    english = not lang.lower().startswith("en")
     seen, cands = set(), []
     for q in _queries(parsed["title"] or ""):
         results = search(q, parsed.get("year"))
         if not results and parsed.get("year"):
             results = search(q)
+        if english:
+            en = search(q, parsed.get("year"), language="en-US")
+            if not en and parsed.get("year"):
+                en = search(q, language="en-US")
+            en_titles = {r["id"]: r["title"] for r in en}
+            for c in results:
+                c["en_title"] = en_titles.get(c["id"])
         for c in results[:10]:
             if c["id"] in seen:
                 continue

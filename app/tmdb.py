@@ -54,8 +54,10 @@ def poster(path):
     return IMG + path if path else None
 
 
-def search_movie(query, year=None):
+def search_movie(query, year=None, language=None):
     params = {"query": query, "include_adult": "false"}
+    if language:
+        params["language"] = language
     if year:
         params["year"] = year
     data = _get("/search/movie", params) or {}
@@ -79,8 +81,10 @@ def search_movie(query, year=None):
     return out
 
 
-def search_tv(query, year=None):
+def search_tv(query, year=None, language=None):
     params = {"query": query, "include_adult": "false"}
+    if language:
+        params["language"] = language
     if year:
         params["first_air_date_year"] = year
     data = _get("/search/tv", params) or {}
