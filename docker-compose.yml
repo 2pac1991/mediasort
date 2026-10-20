@@ -1,0 +1,18 @@
+services:
+  mediasort:
+    build: .
+    image: mediasort:latest
+    container_name: Mediasort
+    restart: unless-stopped
+    ports:
+      - "8484:8484"
+    environment:
+      - TZ=Europe/Vienna
+      - PUID=99
+      - PGID=100
+      # - TMDB_API_KEY=dein_key        # optional, geht auch in der Web-Oberfläche
+      # - UI_PASSWORD=geheim            # optional: Passwortschutz für die Oberfläche
+    volumes:
+      - /mnt/user/appdata/mediasort:/config
+      # EIN gemeinsamer Mount für Downloads + Mediathek, sonst gehen keine Hardlinks
+      - /mnt/user/Plex:/data

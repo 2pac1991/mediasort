@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Mediasort</Name>
+  <Repository>ghcr.io/2pac1991/mediasort:latest</Repository>
+  <Registry/>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://github.com/2pac1991/mediasort</Project>
+  <Overview>Erkennt Filme, Serien und Anime per TMDB und sortiert sie im Plex-Schema ein (Hardlink, Verschieben oder Kopieren). Mit Web-Oberfläche, Watch-Ordner und Rückgängig.</Overview>
+  <Category>MediaApp:Other Tools:</Category>
+  <WebUI>http://[IP]:[PORT:8484]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/2pac1991/mediasort/main/unraid/my-Mediasort.xml</TemplateURL>
+  <Icon/>
+  <ExtraParams>--restart unless-stopped</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="Web-Oberfläche" Target="8484" Default="8484" Mode="tcp" Description="Port der Web-Oberfläche" Type="Port" Display="always" Required="true" Mask="false">8484</Config>
+  <Config Name="Config" Target="/config" Default="/mnt/user/appdata/mediasort" Mode="rw" Description="Einstellungen, Datenbank, Cache" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/mediasort</Config>
+  <Config Name="Daten" Target="/data" Default="/mnt/user/Plex" Mode="rw" Description="Gemeinsamer Ordner für Downloads und Mediathek (für Hardlinks nötig)" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/Plex</Config>
+  <Config Name="TZ" Target="TZ" Default="Europe/Vienna" Mode="" Description="Zeitzone" Type="Variable" Display="advanced" Required="false" Mask="false">Europe/Vienna</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Benutzer-ID" Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Gruppen-ID" Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+  <Config Name="TMDB API-Key" Target="TMDB_API_KEY" Default="" Mode="" Description="Optional, kann auch in der Oberfläche eingetragen werden" Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="Passwort" Target="UI_PASSWORD" Default="" Mode="" Description="Optionaler Passwortschutz der Oberfläche (Benutzername egal)" Type="Variable" Display="always" Required="false" Mask="true"/>
+</Container>

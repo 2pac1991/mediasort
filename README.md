@@ -1,1 +1,47 @@
-# mediasort
+# Mediasort
+
+Eigener FileBot-Ersatz für Unraid: erkennt Filme, Serien und Anime über TMDB und sortiert sie im Plex-Schema ein. Ohne Lizenz, ohne externe Abhängigkeiten (nur Python-Standardbibliothek).
+
+## Was es kann
+
+- Erkennt `S01E02`, `1x02`, `Staffel 1 Folge 2`, Doppelfolgen (`S02E03E04`) und Anime mit absoluter Nummer (`[Gruppe] Titel - 1085`), rechnet diese in Staffel/Folge um
+- Holt Titel, Jahr, Folgentitel und Poster von TMDB (deutsche Titel, Fallback auf Englisch)
+- Plex-Schema mit `{tmdb-12345}` im Ordnernamen, damit Plex garantiert richtig zuordnet
+- Hardlink (kein extra Speicher), Verschieben, Kopieren oder nur Umbenennen; Fallback, wenn Hardlink nicht geht
+- Untertitel (`.de.srt`, `.forced.ger.srt`, `Subs/`-Ordner) wandern mit
+- Web-Oberfläche mit Vorschau: Quelle → Ziel, Sicherheits-Balken, manuelle Korrektur mit Postersuche
+- Watch-Ordner: sichere Treffer automatisch, unsichere landen zum Prüfen im Eingang
+- Verlauf mit Rückgängig, Plex-Bibliothek aktualisieren, Webhook (z. B. Home Assistant)
+- Samples, unfertige Downloads (`.part`) und kleine Dateien werden ignoriert
+
+## Installation auf Unraid
+
+**1. Vorlage holen** (Unraid → Terminal)
+
+```sh
+wget -O /boot/config/plugins/dockerMan/templates-user/my-Mediasort.xml \
+  https://raw.githubusercontent.com/2pac1991/mediasort/main/unraid/my-Mediasort.xml
+```
+
+**2. Container anlegen**
+
+Docker → Container hinzufügen → Vorlage „Mediasort" wählen → Übernehmen.
+Wichtig ist der eine gemeinsame Mount `/mnt/user/Plex → /data`: Downloads und Mediathek müssen im selben Mount liegen, sonst gehen keine Hardlinks.
+
+**3. Einrichten** (Web-Oberfläche auf Port 8484)
+
+- Kostenlosen TMDB-API-Key eintragen (themoviedb.org → Einstellungen → API) und „Testen" drücken
+- Zielordner an deine Plex-Bibliotheken anpassen
+- Optional Plex-Adresse und Token für automatisches Aktualisieren
+
+## Updates
+
+Jede Änderung auf `main` baut automatisch ein neues Image (`ghcr.io/2pac1991/mediasort:latest`). In Unraid erscheint dann beim Container „Update verfügbar".
+
+## Hinweise
+
+- **Alten FileBot-Watch stoppen**, sonst sortieren beide denselben Download-Ordner.
+- Hardlinks auf `/mnt/user` gehen nur, wenn Quelle und Ziel auf derselben Platte landen. Sonst greift der Fallback (Standard: kopieren).
+- Mit JDownloader wird nicht geseedet. Wenn der Download-Ordner nicht voll bleiben soll, ist „Verschieben" die bessere Aktion.
+- Passwortschutz: Variable `UI_PASSWORD` setzen.
+- Webhook-Daten: `{"count": 2, "files": ["Dark (2017) - s02e03 - Geister.mkv", ...]}`

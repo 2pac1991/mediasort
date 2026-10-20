@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mediasort</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#122230; --panel:#1a2d3d; --panel-2:#22384b; --line:#2d465b;
+  --text:#e8eef3; --muted:#8fa5b6; --amber:#f2b33d; --amber-ink:#2a1d04;
+  --ok:#5cc8a8; --warn:#f2b33d; --bad:#ef7a6b;
+  --r-lg:14px; --r-sm:8px;
+  font-family:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--ink);color:var(--text)}
+body{font-size:15px;line-height:1.45;min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+a{color:var(--amber)}
+
+/* Kopf */
+header{position:sticky;top:0;z-index:5;background:rgba(18,34,48,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar{max-width:1180px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.brand{font-family:"Instrument Serif",Georgia,serif;font-size:30px;line-height:1;letter-spacing:-.01em;display:flex;align-items:baseline;gap:10px}
+.brand small{font-family:"Instrument Sans",sans-serif;font-size:13px;color:var(--muted)}
+nav{display:flex;gap:4px;margin-left:auto;background:var(--panel);padding:4px;border-radius:999px}
+nav button{border:0;background:none;padding:7px 16px;border-radius:999px;cursor:pointer;color:var(--muted);font-weight:500}
+nav button[aria-selected=true]{background:var(--panel-2);color:var(--text)}
+.watch{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.dot.on{background:var(--ok);box-shadow:0 0 0 4px rgba(92,200,168,.18)}
+
+main{max-width:1180px;margin:0 auto;padding:22px 20px 120px}
+section[hidden]{display:none}
+
+/* Werkzeugleiste */
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.tools .grow{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel);padding:9px 16px;border-radius:var(--r-sm);cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--amber);color:var(--amber-ink);border-color:var(--amber);font-weight:600}
+.btn.primary:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:none}
+.btn.small{padding:5px 10px;font-size:13px}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:none;border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer;color:var(--muted)}
+.chip[aria-pressed=true]{background:var(--panel-2);color:var(--text);border-color:var(--panel-2)}
+.chip b{font-weight:600;color:var(--text);margin-left:4px}
+
+/* Liste: vorher -> nachher */
+.list{display:flex;flex-direction:column;gap:8px}
+.row{display:grid;grid-template-columns:28px 52px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid transparent;border-radius:var(--r-lg);padding:10px 14px 10px 12px;cursor:pointer}
+.row:hover{border-color:var(--line)}
+.row.sel{border-color:rgba(242,179,61,.55)}
+.row input[type=checkbox]{width:18px;height:18px;accent-color:var(--amber);cursor:pointer}
+.poster{width:52px;aspect-ratio:2/3;border-radius:6px;background:var(--panel-2) center/cover no-repeat;display:grid;place-items:center;color:var(--muted);font-size:11px;text-align:center}
+.from{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.to{margin-top:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 0;min-width:0}
+.to .lib{color:var(--muted);font-size:13px;margin-right:6px}
+.to .seg{font-weight:600;word-break:break-word}
+.to .sep{color:var(--line);margin:0 6px;font-weight:400}
+.to .file{font-weight:500;color:var(--text);opacity:.85}
+.to.none{color:var(--bad);font-weight:500}
+.meta{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:110px}
+.status{font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.s-ready{background:rgba(92,200,168,.15);color:var(--ok)}
+.s-review{background:rgba(242,179,61,.15);color:var(--warn)}
+.s-error{background:rgba(239,122,107,.15);color:var(--bad)}
+.s-done{background:rgba(143,165,182,.15);color:var(--muted)}
+.s-ignored{background:rgba(143,165,182,.1);color:var(--muted)}
+.conf{width:96px;height:5px;border-radius:3px;background:var(--panel-2);overflow:hidden}
+.conf i{display:block;height:100%;background:var(--ok)}
+.conf i.mid{background:var(--warn)} .conf i.low{background:var(--bad)}
+.msg{font-size:12px;color:var(--muted);text-align:right;max-width:200px}
+
+.empty{padding:60px 20px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r-lg)}
+.empty h3{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:28px;color:var(--text);margin:0 0 8px}
+
+/* Leiste unten */
+.dock{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:8px 8px 8px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 12px 32px rgba(0,0,0,.35);z-index:6;max-width:calc(100% - 24px)}
+.dock[hidden]{display:none}
+.dock span,.dock .btn{white-space:nowrap}
+
+/* Verlauf */
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}
+th{color:var(--muted);font-weight:500;font-size:13px}
+td .path{word-break:break-all}
+td .old{color:var(--muted);font-size:12px;word-break:break-all}
+tr.undone td{opacity:.45}
+
+/* Einstellungen */
+.settings{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.card{background:var(--panel);border-radius:var(--r-lg);padding:18px 20px}
+.card h2{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:24px;margin:0 0 4px}
+.card p.hint{margin:0 0 14px;color:var(--muted);font-size:13px}
+label.f{display:block;margin:12px 0 4px;font-size:13px;color:var(--muted)}
+input[type=text],input[type=password],input[type=number],select,textarea{width:100%;background:var(--ink);border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 11px}
+textarea{min-height:64px;resize:vertical;font-size:14px}
+.inline{display:flex;gap:8px;align-items:center}
+.switch{display:flex;align-items:center;gap:10px;margin-top:12px;cursor:pointer}
+.switch input{width:18px;height:18px;accent-color:var(--amber)}
+.savebar{grid-column:1/-1;display:flex;gap:10px;flex-wrap:wrap}
+.preview{margin-top:8px;font-size:13px;color:var(--ok);word-break:break-all}
+
+/* Korrektur-Panel */
+.scrim{position:fixed;inset:0;background:rgba(6,12,18,.6);z-index:10;display:flex;justify-content:flex-end}
+.scrim[hidden]{display:none}
+.sheet{width:min(560px,100%);height:100%;background:var(--panel);overflow:auto;padding:22px;animation:in .22s ease-out}
+@keyframes in{from{transform:translateX(30px);opacity:0}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+.sheet h2{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:28px;margin:0 0 6px}
+.sheet .file{color:var(--muted);font-size:13px;word-break:break-all}
+.seg-toggle{display:inline-flex;background:var(--ink);border-radius:999px;padding:3px;margin:16px 0 10px}
+.seg-toggle button{border:0;background:none;padding:6px 14px;border-radius:999px;cursor:pointer;color:var(--muted)}
+.seg-toggle button[aria-pressed=true]{background:var(--panel-2);color:var(--text)}
+.results{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:12px;margin-top:14px}
+.res{background:none;border:2px solid transparent;border-radius:10px;padding:0;cursor:pointer;text-align:left}
+.res .poster{width:100%;border-radius:8px}
+.res .t{font-size:13px;font-weight:600;margin-top:6px;padding:0 2px}
+.res .y{font-size:12px;color:var(--muted);padding:0 2px 4px}
+.res[aria-pressed=true]{border-color:var(--amber)}
+.ep{display:flex;gap:10px;margin-top:16px}
+.ep[hidden]{display:none}
+.results .hint{grid-column:1/-1;margin:0}
+.ep > div{flex:1}
+.sheet .actions{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap}
+
+.toast{position:fixed;top:76px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--ink);padding:10px 18px;border-radius:999px;font-weight:500;z-index:20;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.toast.err{background:var(--bad);color:#fff}
+.toast[hidden]{display:none}
+
+@media (max-width:700px){
+  .bar{padding:12px 14px;gap:10px}
+  nav{margin-left:0;width:100%;justify-content:space-between}
+  nav button{flex:1}
+  main{padding:16px 12px 120px}
+  .row{grid-template-columns:24px 44px 1fr;padding:10px}
+  .poster{width:44px}
+  .meta{grid-column:3;flex-direction:row;align-items:center;justify-content:flex-start;min-width:0}
+  .msg{text-align:left}
+  th:nth-child(3),td:nth-child(3){display:none}
+  .dock{padding:6px 6px 6px 14px;gap:8px;font-size:14px}
+  .dock .btn{padding:8px 12px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">Mediasort <small id="ver"></small></div>
+    <div class="watch" id="watch"><span class="dot"></span><span>Watch-Ordner aus</span></div>
+    <nav role="tablist">
+      <button role="tab" aria-selected="true" data-tab="inbox">Eingang</button>
+      <button role="tab" aria-selected="false" data-tab="history">Verlauf</button>
+      <button role="tab" aria-selected="false" data-tab="settings">Einstellungen</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section id="tab-inbox">
+    <div class="tools">
+      <button class="btn primary" id="scan">Downloads scannen</button>
+      <button class="btn ghost" id="rescan" title="Alle offenen Dateien neu bei TMDB abfragen">Neu erkennen</button>
+      <span class="grow"></span>
+      <div class="filters" id="filters"></div>
+    </div>
+    <div class="list" id="list"></div>
+  </section>
+
+  <section id="tab-history" hidden>
+    <table>
+      <thead><tr><th>Ergebnis</th><th>Aktion</th><th>Zeit</th><th></th></tr></thead>
+      <tbody id="hist"></tbody>
+    </table>
+  </section>
+
+  <section id="tab-settings" hidden>
+    <form id="sform" class="settings" autocomplete="off">
+      <div class="card">
+        <h2>TMDB</h2>
+        <p class="hint">Kostenloser API-Key von <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">themoviedb.org</a>. Der v3-Key oder das Lese-Token funktionieren beide.</p>
+        <label class="f" for="tmdb_api_key">API-Key</label>
+        <div class="inline"><input type="password" id="tmdb_api_key" name="tmdb_api_key" placeholder="Neuen Key eingeben"><button type="button" class="btn small" id="testtmdb">Testen</button></div>
+        <label class="f" for="language">Sprache der Titel</label>
+        <select id="language" name="language">
+          <option value="de-DE">Deutsch</option><option value="de-AT">Deutsch (Österreich)</option><option value="en-US">Englisch</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <h2>Ordner</h2>
+        <p class="hint">Pfade im Container. Für Hardlinks müssen Downloads und Mediathek unter demselben Mount liegen (z. B. /data).</p>
+        <label class="f" for="input_dirs">Download-Ordner (einer pro Zeile)</label>
+        <textarea id="input_dirs" name="input_dirs"></textarea>
+        <label class="f" for="movie_root">Filme</label><input type="text" id="movie_root" name="movie_root">
+        <label class="f" for="series_root">Serien</label><input type="text" id="series_root" name="series_root">
+        <label class="f" for="anime_root">Anime</label><input type="text" id="anime_root" name="anime_root">
+      </div>
+
+      <div class="card">
+        <h2>Einsortieren</h2>
+        <p class="hint">Hardlinks belegen keinen zusätzlichen Platz. Das Original bleibt im Download-Ordner liegen.</p>
+        <label class="f" for="action">Aktion</label>
+        <select id="action" name="action">
+          <option value="hardlink">Hardlink</option><option value="move">Verschieben</option><option value="copy">Kopieren</option><option value="rename">Nur umbenennen (am Platz)</option>
+        </select>
+        <label class="f" for="hardlink_fallback">Wenn Hardlink nicht geht</label>
+        <select id="hardlink_fallback" name="hardlink_fallback">
+          <option value="copy">Kopieren</option><option value="move">Verschieben</option><option value="fail">Abbrechen</option>
+        </select>
+        <label class="f" for="on_conflict">Wenn Zieldatei schon existiert</label>
+        <select id="on_conflict" name="on_conflict">
+          <option value="skip">Überspringen</option><option value="overwrite">Überschreiben</option><option value="keep_both">Beide behalten</option>
+        </select>
+        <label class="switch"><input type="checkbox" name="include_subtitles"> Untertitel mitnehmen</label>
+        <label class="f" for="min_size_mb">Dateien ignorieren unter (MB)</label>
+        <input type="number" id="min_size_mb" name="min_size_mb" min="0">
+        <label class="f" for="anime_keywords">Ordnernamen, die Anime bedeuten</label>
+        <textarea id="anime_keywords" name="anime_keywords"></textarea>
+      </div>
+
+      <div class="card">
+        <h2>Watch-Ordner</h2>
+        <p class="hint">Neue Downloads werden automatisch einsortiert, sobald sie fertig sind und der Treffer sicher genug ist. Unsichere landen im Eingang.</p>
+        <label class="switch"><input type="checkbox" name="watch_enabled"> Automatisch einsortieren</label>
+        <label class="f" for="watch_interval">Prüfen alle (Sekunden)</label>
+        <input type="number" id="watch_interval" name="watch_interval" min="15">
+        <label class="f" for="watch_settle_seconds">Datei muss unverändert sein seit (Sekunden)</label>
+        <input type="number" id="watch_settle_seconds" name="watch_settle_seconds" min="0">
+        <label class="f" for="auto_threshold">Mindest-Sicherheit für Automatik: <span id="thrv"></span></label>
+        <input type="range" id="auto_threshold" name="auto_threshold" min="0.5" max="1" step="0.01" style="width:100%;accent-color:var(--amber)">
+      </div>
+
+      <div class="card">
+        <h2>Plex</h2>
+        <p class="hint">Nach dem Einsortieren die Bibliothek aktualisieren.</p>
+        <label class="f" for="plex_url">Plex-Adresse</label><input type="text" id="plex_url" name="plex_url" placeholder="http://192.168.1.10:32400">
+        <label class="f" for="plex_token">Plex-Token</label><input type="password" id="plex_token" name="plex_token" placeholder="Neues Token eingeben">
+      </div>
+
+      <div class="card">
+        <h2>Benachrichtigung</h2>
+        <p class="hint">Optionaler Webhook, z. B. für eine Home-Assistant-Automation. Bekommt Anzahl und Dateinamen als JSON.</p>
+        <label class="f" for="webhook_url">Webhook-URL</label><input type="text" id="webhook_url" name="webhook_url" placeholder="http://homeassistant:8123/api/webhook/mediasort">
+      </div>
+      <div class="card" style="grid-column:1/-1">
+        <h2>Benennung</h2>
+        <p class="hint">Platzhalter: {title} {year} {tmdbid} {show} {season:2} {episode:2} {eptitle}. Ein / erzeugt einen Ordner. {tmdb-{tmdbid}} hilft Plex bei der Zuordnung.</p>
+        <label class="f" for="movie_format">Filme</label><input type="text" id="movie_format" name="movie_format">
+        <div class="preview" id="pv-movie"></div>
+        <label class="f" for="series_format">Serien</label><input type="text" id="series_format" name="series_format">
+        <div class="preview" id="pv-series"></div>
+        <label class="f" for="anime_format">Anime</label><input type="text" id="anime_format" name="anime_format">
+        <div class="preview" id="pv-anime"></div>
+      </div>
+
+      <div class="savebar">
+        <button class="btn primary" type="submit">Einstellungen speichern</button>
+        <button class="btn ghost" type="button" id="clearcache">TMDB-Cache leeren</button>
+      </div>
+    </form>
+  </section>
+</main>
+
+<div class="dock" id="dock" hidden>
+  <span id="dockinfo"></span>
+  <button class="btn ghost small" id="selnone">Abwählen</button>
+  <button class="btn primary" id="apply">Einsortieren</button>
+</div>
+
+<div class="scrim" id="scrim" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shtitle">
+    <h2 id="shtitle">Zuordnung ändern</h2>
+    <div class="file" id="shfile"></div>
+    <div class="seg-toggle" role="group">
+      <button type="button" data-type="movie" aria-pressed="true">Film</button>
+      <button type="button" data-type="tv" aria-pressed="false">Serie / Anime</button>
+    </div>
+    <div class="inline">
+      <input type="text" id="shq" placeholder="Titel oder TMDB-ID">
+      <input type="text" id="shy" placeholder="Jahr" style="width:90px">
+      <button class="btn" id="shsearch" type="button">Suchen</button>
+    </div>
+    <div class="results" id="shres"></div>
+    <div class="ep" id="shep" hidden>
+      <div><label class="f" for="shs">Staffel</label><input type="number" id="shs" min="0"></div>
+      <div><label class="f" for="she">Folge</label><input type="number" id="she" min="0"></div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="shsave" type="button" disabled>Zuordnung übernehmen</button>
+      <button class="btn" id="shignore" type="button">Datei ignorieren</button>
+      <button class="btn ghost" id="shclose" type="button">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let items = [], selected = new Set(), filter = "open", settings = {}, sheet = null;
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, {headers: {"Content-Type": "application/json"}, ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || "Fehler " + r.status);
+  return data;
+}
+function toast(msg, err) {
+  const t = $("#toast"); t.textContent = msg; t.className = "toast" + (err ? " err" : ""); t.hidden = false;
+  clearTimeout(t._h); t._h = setTimeout(() => t.hidden = true, err ? 5000 : 2600);
+}
+
+/* Tabs */
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
+  ["inbox","history","settings"].forEach(t => $("#tab-" + t).hidden = t !== b.dataset.tab);
+  if (b.dataset.tab === "history") loadHistory();
+  if (b.dataset.tab === "settings") loadSettings();
+  updateDock();
+});
+
+/* Eingang */
+const STATUS = {ready:"Bereit", review:"Prüfen", error:"Fehler", done:"Erledigt", ignored:"Ignoriert", new:"Neu"};
+function libLabel(target) {
+  if (!target) return null;
+  for (const [k, name] of [["movie_root","Filme"],["series_root","Serien"],["anime_root","Anime"]]) {
+    const root = settings[k];
+    if (root && target.startsWith(root + "/")) return {name, rest: target.slice(root.length + 1)};
+  }
+  return {name: "", rest: target};
+}
+function renderFilters() {
+  const c = {open:0, ready:0, review:0, error:0};
+  items.forEach(i => { if (!["done","ignored"].includes(i.status)) c.open++; if (c[i.status] !== undefined) c[i.status]++; });
+  const defs = [["open","Offen",c.open],["ready","Bereit",c.ready],["review","Prüfen",c.review],["error","Fehler",c.error],["all","Alle",null]];
+  $("#filters").innerHTML = defs.map(([k,l,n]) =>
+    `<button class="chip" data-f="${k}" aria-pressed="${filter===k}">${l}${n!==null?`<b>${n}</b>`:""}</button>`).join("");
+  $("#filters").querySelectorAll("button").forEach(b => b.onclick = () => { filter = b.dataset.f; if (filter === "all") loadItems(true); else render(); });
+}
+function visible() {
+  if (filter === "all") return items;
+  if (filter === "open") return items.filter(i => !["done","ignored"].includes(i.status));
+  return items.filter(i => i.status === filter);
+}
+function render() {
+  renderFilters();
+  const list = visible();
+  if (!list.length) {
+    $("#list").innerHTML = settings.tmdb_api_key_set === false
+      ? `<div class="empty"><h3>Noch kein TMDB-Key</h3>Trag in den Einstellungen deinen kostenlosen TMDB-API-Key ein, dann kann es losgehen.</div>`
+      : `<div class="empty"><h3>Alles einsortiert</h3>Neue Downloads erscheinen hier nach einem Scan oder automatisch über den Watch-Ordner.</div>`;
+    updateDock(); return;
+  }
+  $("#list").innerHTML = list.map(i => {
+    const m = i.match || {}, lib = libLabel(i.target), conf = Math.round((i.confidence || 0) * 100);
+    const segs = lib ? lib.rest.split("/") : [];
+    const to = lib
+      ? `<div class="to"><span class="lib">${esc(lib.name)}</span>${segs.map((s, n) =>
+          `<span class="${n === segs.length - 1 ? "file" : "seg"}">${esc(s)}</span>${n < segs.length - 1 ? '<span class="sep">/</span>' : ""}`).join("")}</div>`
+      : `<div class="to none">${esc(i.message || "Kein Ziel")}</div>`;
+    const cls = conf >= 85 ? "" : conf >= 60 ? "mid" : "low";
+    const selectable = !["done","ignored"].includes(i.status) && i.target;
+    return `<div class="row ${selected.has(i.id) ? "sel" : ""}" data-id="${i.id}">
+      <input type="checkbox" aria-label="Auswählen" ${selected.has(i.id) ? "checked" : ""} ${selectable ? "" : "disabled"}>
+      <div class="poster" style="${m.poster ? `background-image:url('${esc(m.poster)}')` : ""}">${m.poster ? "" : "?"}</div>
+      <div style="min-width:0"><div class="from" title="${esc(i.path)}">${esc(i.path.split("/").pop())}</div>${to}</div>
+      <div class="meta"><span class="status s-${i.status}">${STATUS[i.status] || i.status}</span>
+        ${i.match ? `<div class="conf" title="Sicherheit ${conf} %"><i class="${cls}" style="width:${conf}%"></i></div>` : ""}
+        ${i.message && i.target ? `<div class="msg">${esc(i.message)}</div>` : ""}</div>
+    </div>`;
+  }).join("");
+  $("#list").querySelectorAll(".row").forEach(row => {
+    const id = row.dataset.id, cb = row.querySelector("input");
+    cb.onclick = e => { e.stopPropagation(); cb.checked ? selected.add(id) : selected.delete(id); row.classList.toggle("sel", cb.checked); updateDock(); };
+    row.onclick = () => openSheet(items.find(i => i.id === id));
+  });
+  updateDock();
+}
+function updateDock() {
+  const onInbox = !$("#tab-inbox").hidden;
+  [...selected].forEach(id => { const i = items.find(x => x.id === id); if (!i || !i.target || ["done","ignored"].includes(i.status)) selected.delete(id); });
+  const ready = items.filter(i => i.status === "ready").length;
+  $("#dock").hidden = !onInbox || (!selected.size && !ready);
+  if (selected.size) { $("#dockinfo").textContent = `${selected.size} ausgewählt`; $("#apply").textContent = "Einsortieren"; $("#selnone").hidden = false; }
+  else { $("#dockinfo").textContent = `${ready} bereit`; $("#apply").textContent = innerWidth < 500 ? "Alle einsortieren" : "Alle bereiten einsortieren"; $("#selnone").hidden = true; }
+}
+async function loadItems(all) {
+  items = await api("/api/items" + (all ? "?all=1" : ""));
+  render();
+}
+async function scan(force) {
+  const b = force ? $("#rescan") : $("#scan"); const old = b.textContent;
+  b.disabled = true; b.textContent = "Scanne …";
+  try {
+    const r = await api("/api/scan", {method: "POST", body: {force}});
+    items = r.items; render();
+    toast(r.new ? `${r.new} Dateien erkannt` : "Keine neuen Dateien");
+  } catch (e) { toast(e.message, true); }
+  b.disabled = false; b.textContent = old;
+}
+$("#scan").onclick = () => scan(false);
+$("#rescan").onclick = () => scan(true);
+$("#selnone").onclick = () => { selected.clear(); render(); };
+$("#apply").onclick = async () => {
+  const ids = selected.size ? [...selected] : items.filter(i => i.status === "ready").map(i => i.id);
+  if (!ids.length) return;
+  $("#apply").disabled = true;
+  try {
+    const res = await api("/api/apply", {method: "POST", body: {ids}});
+    const ok = res.filter(r => r.ok).length, bad = res.length - ok;
+    toast(bad ? `${ok} einsortiert, ${bad} mit Fehler` : `${ok} einsortiert`, bad > 0);
+    selected.clear(); await loadItems(filter === "all");
+  } catch (e) { toast(e.message, true); }
+  $("#apply").disabled = false;
+};
+
+/* Korrektur */
+function openSheet(item) {
+  const p = item.parsed || {}, m = item.match || {};
+  sheet = {item, type: m.type || (p.kind === "movie" ? "movie" : "tv"), pick: null};
+  $("#shfile").textContent = item.path;
+  $("#shq").value = m.title || p.title || ""; $("#shy").value = (p.year || "");
+  $("#shs").value = m.season ?? p.season ?? ""; $("#she").value = m.episode ?? p.episode ?? p.absolute ?? "";
+  setType(sheet.type);
+  const cands = (m.candidates || []).filter(c => c.type === sheet.type);
+  showResults(cands, m.id);
+  if (m.id) sheet.pick = {type: m.type, id: m.id};
+  $("#shsave").disabled = !sheet.pick;
+  $("#shignore").textContent = item.status === "ignored" ? "Wieder anzeigen" : "Datei ignorieren";
+  $("#scrim").hidden = false; $("#shq").focus();
+}
+function setType(t) {
+  sheet.type = t;
+  document.querySelectorAll(".seg-toggle button").forEach(b => b.setAttribute("aria-pressed", b.dataset.type === t));
+  $("#shep").hidden = t !== "tv";
+}
+function showResults(list, activeId) {
+  $("#shres").innerHTML = list.length ? list.map(r =>
+    `<button type="button" class="res" data-id="${r.id}" data-type="${r.type}" aria-pressed="${r.id === activeId}">
+      <div class="poster" style="${r.poster ? `background-image:url('${esc(r.poster)}')` : ""}">${r.poster ? "" : esc(r.title)}</div>
+      <div class="t">${esc(r.title)}</div><div class="y">${r.year || "–"}</div></button>`).join("")
+    : `<p class="hint" style="color:var(--muted)">Suche nach dem Titel, um Treffer zu sehen.</p>`;
+  $("#shres").querySelectorAll(".res").forEach(b => b.onclick = () => {
+    $("#shres").querySelectorAll(".res").forEach(x => x.setAttribute("aria-pressed", x === b));
+    sheet.pick = {type: b.dataset.type, id: +b.dataset.id}; $("#shsave").disabled = false;
+  });
+}
+document.querySelectorAll(".seg-toggle button").forEach(b => b.onclick = () => { setType(b.dataset.type); sheet.pick = null; $("#shsave").disabled = true; showResults([]); });
+async function doSearch() {
+  try {
+    const q = encodeURIComponent($("#shq").value), y = encodeURIComponent($("#shy").value);
+    showResults(await api(`/api/search?type=${sheet.type}&q=${q}&year=${y}`));
+  } catch (e) { toast(e.message, true); }
+}
+$("#shsearch").onclick = doSearch;
+$("#shq").onkeydown = e => { if (e.key === "Enter") doSearch(); };
+$("#shsave").onclick = async () => {
+  const body = {...sheet.pick};
+  if (body.type === "tv") { body.season = $("#shs").value || null; body.episode = $("#she").value || null; }
+  try {
+    const it = await api(`/api/items/${sheet.item.id}/match`, {method: "POST", body});
+    items = items.map(i => i.id === it.id ? it : i);
+    closeSheet(); render(); toast("Zuordnung übernommen");
+  } catch (e) { toast(e.message, true); }
+};
+$("#shignore").onclick = async () => {
+  const action = sheet.item.status === "ignored" ? "reset" : "ignore";
+  await api(`/api/items/${sheet.item.id}/${action}`, {method: "POST"});
+  closeSheet(); await loadItems(filter === "all"); toast(action === "ignore" ? "Datei wird ignoriert" : "Datei wieder im Eingang");
+};
+function closeSheet() { $("#scrim").hidden = true; sheet = null; }
+$("#shclose").onclick = closeSheet;
+$("#scrim").onclick = e => { if (e.target === $("#scrim")) closeSheet(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape" && sheet) closeSheet(); });
+
+/* Verlauf */
+const ACT = {hardlink:"Hardlink", move:"Verschoben", copy:"Kopiert", rename:"Umbenannt"};
+async function loadHistory() {
+  const h = await api("/api/history");
+  $("#hist").innerHTML = h.length ? h.map(e => `<tr class="${e.undone ? "undone" : ""}">
+    <td><div class="path">${esc(e.dst)}</div><div class="old">${esc(e.src)}</div></td>
+    <td>${ACT[e.action] || e.action}${e.extras && e.extras.length ? ` + ${e.extras.length} UT` : ""}</td>
+    <td>${new Date(e.ts * 1000).toLocaleString("de-AT", {dateStyle: "short", timeStyle: "short"})}</td>
+    <td>${e.undone ? "Rückgängig" : `<button class="btn small" data-undo="${e.id}">Rückgängig</button>`}</td></tr>`).join("")
+    : `<tr><td colspan="4" style="color:var(--muted);padding:30px 8px">Noch nichts einsortiert.</td></tr>`;
+  $("#hist").querySelectorAll("[data-undo]").forEach(b => b.onclick = async () => {
+    try { await api(`/api/history/${b.dataset.undo}/undo`, {method: "POST"}); toast("Rückgängig gemacht"); loadHistory(); loadItems(); }
+    catch (e) { toast(e.message, true); }
+  });
+}
+
+/* Einstellungen */
+const F = $("#sform");
+function fill(s) {
+  settings = s;
+  for (const el of F.elements) {
+    if (!el.name || !(el.name in s)) continue;
+    if (el.type === "checkbox") el.checked = !!s[el.name];
+    else if (Array.isArray(s[el.name])) el.value = s[el.name].join("\n");
+    else if (el.type !== "password") el.value = s[el.name];
+  }
+  $("#tmdb_api_key").placeholder = s.tmdb_api_key_set ? "Gespeichert (zum Ändern neu eingeben)" : "Noch kein Key";
+  $("#plex_token").placeholder = s.plex_token_set ? "Gespeichert (zum Ändern neu eingeben)" : "Optional";
+  $("#thrv").textContent = Math.round(s.auto_threshold * 100) + " %";
+  previews();
+}
+async function loadSettings() { fill(await api("/api/settings")); }
+function fmt(f, v) {
+  let out = f.replace(/\{(\w+)(?::(\d+))?\}/g, (m, k, pad) => k in v ? (pad ? String(v[k]).padStart(+pad, "0") : v[k]) : m);
+  return out.split("/").map(s => s.replace(/:/g, " -").trim()).join("/");
+}
+function previews() {
+  const mv = {title: "Der Herr der Ringe - Die Gefährten", year: 2001, tmdbid: 120};
+  const tv = {show: "Dark", title: "Dark", year: 2017, tmdbid: 70523, season: 1, episode: 3, eptitle: "Vergangenheit und Gegenwart"};
+  const an = {show: "Frieren", title: "Frieren", year: 2023, tmdbid: 209867, season: 1, episode: 12, eptitle: "Ein wahrer Held"};
+  $("#pv-movie").textContent = fmt(F.movie_format.value, mv) + ".mkv";
+  $("#pv-series").textContent = fmt(F.series_format.value, tv) + ".mkv";
+  $("#pv-anime").textContent = fmt(F.anime_format.value, an) + ".mkv";
+}
+["movie_format","series_format","anime_format"].forEach(n => F[n].oninput = previews);
+F.auto_threshold.oninput = () => $("#thrv").textContent = Math.round(F.auto_threshold.value * 100) + " %";
+F.onsubmit = async e => {
+  e.preventDefault();
+  const body = {};
+  for (const el of F.elements) {
+    if (!el.name) continue;
+    if (el.type === "checkbox") body[el.name] = el.checked;
+    else if (el.type === "number" || el.type === "range") body[el.name] = Number(el.value);
+    else body[el.name] = el.value;
+  }
+  try { fill(await api("/api/settings", {method: "POST", body})); F.tmdb_api_key.value = ""; F.plex_token.value = ""; toast("Gespeichert"); status(); }
+  catch (err) { toast(err.message, true); }
+};
+$("#testtmdb").onclick = async () => {
+  const key = F.tmdb_api_key.value;
+  try {
+    if (key) { await api("/api/settings", {method: "POST", body: {tmdb_api_key: key}}); F.tmdb_api_key.value = ""; }
+    await api("/api/test-tmdb", {method: "POST"}); toast("TMDB-Verbindung funktioniert"); loadSettings();
+  } catch (e) { toast(e.message, true); }
+};
+$("#clearcache").onclick = async () => { await api("/api/cache/clear", {method: "POST"}); toast("Cache geleert"); };
+
+/* Status */
+async function status() {
+  try {
+    const s = await api("/api/status");
+    $("#ver").textContent = "v" + s.version;
+    const on = s.watch_enabled && s.tmdb_key;
+    $("#watch").innerHTML = `<span class="dot ${on ? "on" : ""}"></span><span>${on ? "Watch-Ordner aktiv" : "Watch-Ordner aus"}${s.state.last_error ? " · Fehler" : ""}</span>`;
+    $("#watch").title = s.state.last_error || "";
+  } catch (e) {}
+}
+
+(async () => {
+  await loadSettings(); await loadItems(); status();
+  setInterval(status, 30000);
+  setInterval(() => { if (!$("#tab-inbox").hidden && !sheet && !selected.size) loadItems(filter === "all"); }, 30000);
+})();
+</script>
+</body>
+</html>
