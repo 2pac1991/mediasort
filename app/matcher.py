@@ -8,8 +8,15 @@ from . import config, tmdb
 ANIMATION_GENRE = 16
 
 
+UMLAUTS = {"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss"}
+
+
 def norm(s):
-    s = unicodedata.normalize("NFKD", s or "")
+    # "Zeitenläufer" und "zeitenlaeufer" sollen gleich aussehen
+    s = (s or "").lower()
+    for k, v in UMLAUTS.items():
+        s = s.replace(k, v)
+    s = unicodedata.normalize("NFKD", s)
     s = "".join(c for c in s if not unicodedata.combining(c)).lower()
     s = s.replace("&", " and ")
     s = re.sub(r"[^a-z0-9 ]+", " ", s)
@@ -43,6 +50,10 @@ def _queries(title):
     stripped = re.sub(r"\(.*?\)", "", title).strip()
     if stripped and stripped not in qs:
         qs.append(stripped)
+    # Dateinamen schreiben Umlaute aus ("laeufer"), TMDB findet aber nur "läufer"
+    umlaut = re.sub(r"ae|oe|ue", lambda m: {"ae": "ä", "oe": "ö", "ue": "ü"}[m.group(0)], title)
+    if umlaut != title and umlaut not in qs:
+        qs.append(umlaut)
     return qs
 
 
@@ -54,7 +65,8 @@ def find_candidates(parsed):
     lang = config.get().get("language") or "de-DE"
     english = not lang.lower().startswith("en")
     seen, cands = set(), []
-    for q in _queries(parsed["title"] or ""):
+
+    def collect(q, penalty):
         results = search(q, parsed.get("year"))
         if not results and parsed.get("year"):
             results = search(q)
@@ -69,11 +81,22 @@ def find_candidates(parsed):
             if c["id"] in seen:
                 continue
             seen.add(c["id"])
-            c["score"] = score(parsed, c)
-            # Bei Varianten (Teil-Titel) leicht abwerten
-            if q != parsed["title"]:
-                c["score"] *= 0.95
+            c["score"] = score(parsed, c) * penalty
             cands.append(c)
+
+    title = parsed["title"] or ""
+    for q in _queries(title):
+        # Bei Varianten (Teil-Titel) leicht abwerten, die Umlaut-Schreibweise ist gleichwertig
+        same = norm(q) == norm(title)
+        collect(q, 1.0 if same else 0.95)
+    if not cands:
+        # Nichts gefunden: hinten Wörter weglassen ("dark matter der zeitenlaeufer" -> "dark matter").
+        # Oft hängt der deutsche Untertitel am englischen Originaltitel.
+        words = title.split()
+        for n in range(len(words) - 1, 1, -1):
+            collect(" ".join(words[:n]), 0.95)
+            if cands:
+                break
     # Beliebtheit als Tiebreaker
     cands.sort(key=lambda c: (round(c["score"], 2), c.get("popularity", 0)), reverse=True)
     return cands
