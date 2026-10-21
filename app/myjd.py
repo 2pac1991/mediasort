@@ -115,11 +115,47 @@ def configured():
     return bool(s.get("myjd_email") and s.get("myjd_password"))
 
 
+_cache = {"sess": None, "dev": None, "key": None, "ts": 0}
+SESSION_TTL = 600  # Sitzung 10 Minuten wiederverwenden, damit das Live-Fenster nicht ständig neu anmeldet
+
+
 def _session():
     s = config.get()
     if not configured():
         raise MyJDError("My.JDownloader ist nicht eingerichtet")
     return Session(s["myjd_email"].strip(), s["myjd_password"]), s
+
+
+def _pick_device(sess, s):
+    devices = sess.devices()
+    if not devices:
+        raise MyJDError("My.JDownloader: Kein JDownloader mit diesem Konto online")
+    wanted = (s.get("myjd_device") or "").strip()
+    dev = next((d for d in devices if d["name"] == wanted), None) if wanted else devices[0]
+    if not dev:
+        raise MyJDError(f"My.JDownloader: Gerät „{wanted}“ ist nicht online")
+    return dev
+
+
+def _device_call(path, params=()):
+    """Aufruf am JDownloader mit zwischengespeicherter Sitzung; bei abgelaufener Sitzung einmal neu anmelden."""
+    s = config.get()
+    key = (s.get("myjd_email"), s.get("myjd_password"), s.get("myjd_device"))
+    for attempt in (1, 2):
+        with _lock:
+            fresh = _cache["sess"] is None or _cache["key"] != key or time.time() - _cache["ts"] > SESSION_TTL
+        if fresh or attempt == 2:
+            sess, s = _session()
+            dev = _pick_device(sess, s)
+            with _lock:
+                _cache.update(sess=sess, dev=dev, key=key, ts=time.time())
+        try:
+            return _cache["sess"].call(_cache["dev"]["id"], path, list(params))
+        except MyJDError:
+            if attempt == 2:
+                raise
+            with _lock:
+                _cache["sess"] = None
 
 
 def list_devices():
@@ -131,25 +167,48 @@ def list_devices():
 
 
 def add_links(urls, package=""):
-    sess, s = _session()
-    try:
-        devices = sess.devices()
-        if not devices:
-            raise MyJDError("My.JDownloader: Kein JDownloader mit diesem Konto online")
-        wanted = (s.get("myjd_device") or "").strip()
-        dev = next((d for d in devices if d["name"] == wanted), None) if wanted else devices[0]
-        if not dev:
-            raise MyJDError(f"My.JDownloader: Gerät „{wanted}“ ist nicht online")
-        sess.call(dev["id"], "/linkgrabberv2/addLinks", [{
-            "links": "\n".join(urls),
-            "packageName": package or None,
-            "autostart": True,
-            "overwritePackagizerRules": False,
-            "priority": "DEFAULT",
-            "destinationFolder": None,
-            "extractPassword": None,
-            "downloadPassword": None,
-        }])
-        return dev["name"]
-    finally:
-        sess.disconnect()
+    _device_call("/linkgrabberv2/addLinks", [{
+        "links": "\n".join(urls),
+        "packageName": package or None,
+        "autostart": True,
+        "overwritePackagizerRules": False,
+        "priority": "DEFAULT",
+        "destinationFolder": None,
+        "extractPassword": None,
+        "downloadPassword": None,
+    }])
+    return _cache["dev"]["name"]
+
+
+def status():
+    """Linksammler, Downloads und Zustand des JDownloaders für das Live-Fenster."""
+    grabber = _device_call("/linkgrabberv2/queryPackages", [{
+        "bytesTotal": True, "childCount": True, "hosts": True, "saveTo": True, "status": True,
+        "availableOnlineCount": True, "availableOfflineCount": True, "availableUnknownCount": True,
+        "maxResults": -1, "startAt": 0,
+    }]) or []
+    downloads = _device_call("/downloadsV2/queryPackages", [{
+        "bytesLoaded": True, "bytesTotal": True, "childCount": True, "enabled": True, "eta": True,
+        "finished": True, "hosts": True, "running": True, "speed": True, "status": True, "saveTo": True,
+        "maxResults": -1, "startAt": 0,
+    }]) or []
+    state = _device_call("/downloadcontroller/getCurrentState")
+    return {"device": _cache["dev"]["name"], "state": state, "grabber": grabber, "downloads": downloads}
+
+
+def start_packages(package_ids):
+    """Pakete aus dem Linksammler in die Downloadliste schieben und Downloads starten."""
+    ids = [int(i) for i in package_ids]
+    _device_call("/linkgrabberv2/moveToDownloadlist", [[], ids])
+    _device_call("/downloadcontroller/start")
+
+
+def control(action):
+    if action == "start":
+        _device_call("/downloadcontroller/start")
+    elif action == "pause":
+        _device_call("/downloadcontroller/pause", [True])
+    elif action == "resume":
+        _device_call("/downloadcontroller/pause", [False])
+    else:
+        raise ValueError("Unbekannte Aktion")

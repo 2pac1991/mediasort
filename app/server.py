@@ -127,7 +127,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, files.list_dir(q.get("root", ""), q.get("path", "")))
             if u.path == "/api/links":
                 self._need(add_links=True)
-                return self._send(200, {"items": db.list_links(), "configured": links.configured()})
+                return self._send(200, {"items": db.list_links(), "configured": links.configured(), "live": myjd.configured()})
+            if u.path == "/api/jd/status":
+                self._need(add_links=True)
+                try:
+                    return self._send(200, myjd.status())
+                except myjd.MyJDError as e:
+                    raise ValueError(str(e)) from e
             if u.path == "/api/trash":
                 return self._send(200, {"items": files.list_trash(), "days": config.get().get("trash_days")})
             if u.path == "/api/status":
@@ -228,6 +234,16 @@ class Handler(BaseHTTPRequestHandler):
                 n = links.send(body.get("text"), body.get("package"), self.me["name"])
                 log.info("%s hat %d Link(s) an JDownloader geschickt", self.me["name"], n)
                 return self._send(200, {"ok": True, "count": n})
+            if u.path in ("/api/jd/start", "/api/jd/control"):
+                self._need(add_links=True)
+                try:
+                    if u.path == "/api/jd/start":
+                        myjd.start_packages(body.get("ids") or [])
+                    else:
+                        myjd.control(body.get("action"))
+                    return self._send(200, {"ok": True})
+                except myjd.MyJDError as e:
+                    raise ValueError(str(e)) from e
             if u.path == "/api/cnl/decode":
                 self._need(add_links=True)
                 if body.get("keys") and body.get("crypts"):

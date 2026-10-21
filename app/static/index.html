@@ -146,6 +146,19 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
 .sheethead h2{margin:0}
 .xbtn{flex-shrink:0;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--ink);color:var(--text);font-size:16px;cursor:pointer}
 
+/* JDownloader live */
+.jdstate{display:flex;align-items:center;gap:8px;margin:12px 0 4px;flex-wrap:wrap}
+.jdstate .grow{display:none}
+#jd_state{flex-basis:100%}
+.jdh{font-weight:600;font-size:15px;margin:20px 0 8px}
+.jdpkg{background:var(--ink);border-radius:var(--r-sm);padding:12px}
+.jdpkg b{display:block;word-break:break-word}
+.jdpkg .hint{color:var(--muted);font-size:12px;margin-top:3px}
+.jdpkg .st{font-size:12px;margin-top:4px;color:var(--warn)}
+.jdbar{height:6px;border-radius:3px;background:var(--panel-2);overflow:hidden;margin-top:8px}
+.jdbar i{display:block;height:100%;background:var(--ok)}
+.jdpkg .btn{margin-top:10px}
+
 /* Benachrichtigung */
 .steps{padding-left:20px;margin:14px 0 0}
 .steps li{margin-bottom:16px}
@@ -228,6 +241,7 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
       <button class="btn primary" id="scan">Downloads scannen</button>
       <button class="btn ghost" id="rescan" title="Alle offenen Dateien neu bei TMDB abfragen">Neu erkennen</button>
       <button class="btn" id="linksbtn" type="button" hidden>＋ Links senden</button>
+      <button class="btn ghost" id="jdbtn" type="button" hidden>📥 JDownloader</button>
       <span class="grow"></span>
       <div class="filters" id="filters"></div>
     </div>
@@ -469,6 +483,20 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
     </details>
     <h3 style="font-weight:600;font-size:15px;margin:26px 0 8px">Zuletzt gesendet</h3>
     <div id="lk_hist" class="ulist"></div>
+  </div>
+</div>
+
+<div class="scrim" id="jdscrim" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="jdtitle">
+    <div class="sheethead"><h2 id="jdtitle">JDownloader</h2><button class="xbtn" type="button" id="jd_x" aria-label="Schließen">✕</button></div>
+    <div class="jdstate"><span id="jd_state" class="hint" style="color:var(--muted)">Verbinde …</span>
+      <span class="grow"></span>
+      <button class="btn small" type="button" id="jd_start">▶ Start</button>
+      <button class="btn small" type="button" id="jd_pause">⏸ Pause</button></div>
+    <h3 class="jdh">Linksammler</h3>
+    <div id="jd_grabber" class="ulist"></div>
+    <h3 class="jdh">Downloads</h3>
+    <div id="jd_downloads" class="ulist"></div>
   </div>
 </div>
 
@@ -798,9 +826,11 @@ function countLinks() {
   const n = new Set($("#lk_text").value.match(linkRe) || []).size;
   $("#lk_count").textContent = n ? `${n} ${n === 1 ? "Link" : "Links"} erkannt` : "";
 }
+let jdLive = false;
 async function loadLinkHist() {
   try {
     const r = await api("/api/links");
+    jdLive = !!r.live; $("#jdbtn").hidden = !jdLive;
     $("#lk_hist").innerHTML = r.items.length ? r.items.map(l => `<div class="urow" style="display:block">
         <b>${esc(l.package || (l.urls[0] || "").replace(/^https?:\/\//, "").slice(0, 60))}</b>
         <div class="hint" style="color:var(--muted);font-size:12px;margin-top:2px">${l.count} ${l.count === 1 ? "Link" : "Links"} · ${esc(l.user)} · ${fmtDate(l.ts)}</div></div>`).join("")
@@ -843,6 +873,7 @@ $("#lk_send").onclick = async () => {
     toast(`${r.count} ${r.count === 1 ? "Link" : "Links"} an JDownloader gesendet`);
     $("#lk_text").value = ""; $("#lk_pkg").value = ""; countLinks();
     closeLinks();
+    if (jdLive) setTimeout(openJd, 350);
   } catch (e) { toast(e.message, true); }
   b.disabled = false;
 };
@@ -856,6 +887,60 @@ window.addEventListener("popstate", () => closeLinks(true));
 $("#lk_close").onclick = () => closeLinks();
 $("#lk_x").onclick = () => closeLinks();
 $("#linkscrim").onclick = e => { if (e.target === $("#linkscrim")) closeLinks(); };
+
+/* JDownloader live */
+let jdTimer = null;
+const STATES = {RUNNING: "Lädt", PAUSE: "Pausiert", IDLE: "Bereit", STOPPED: "Gestoppt", STOPPING: "Stoppt …"};
+const fmtEta = s => s == null || s < 0 ? "" : s >= 3600 ? `${Math.floor(s / 3600)} Std ${Math.floor(s % 3600 / 60)} Min` : s >= 60 ? `${Math.floor(s / 60)} Min` : `${s} Sek`;
+function openJd() {
+  if ($("#jdscrim").hidden) history.pushState({sheet: "jd"}, "");
+  $("#jdscrim").hidden = false;
+  refreshJd();
+  clearInterval(jdTimer); jdTimer = setInterval(refreshJd, 3000);
+}
+function closeJd(fromHistory) {
+  if ($("#jdscrim").hidden) return;
+  $("#jdscrim").hidden = true; clearInterval(jdTimer);
+  if (!fromHistory && history.state && history.state.sheet === "jd") history.back();
+}
+window.addEventListener("popstate", () => closeJd(true));
+async function refreshJd() {
+  if (document.hidden) return;
+  try {
+    const r = await api("/api/jd/status");
+    $("#jd_state").innerHTML = `<b>${esc(r.device)}</b> · ${STATES[r.state] || esc(r.state || "")}`;
+    const g = r.grabber || [];
+    $("#jd_grabber").innerHTML = g.length ? g.map(p => `<div class="jdpkg">
+        <b>${esc(p.name)}</b>
+        <div class="hint">${p.childCount || 0} ${p.childCount === 1 ? "Datei" : "Dateien"}${p.bytesTotal ? " · " + fmtSize(p.bytesTotal) : ""}${(p.hosts || []).length ? " · " + esc(p.hosts.join(", ")) : ""}</div>
+        <div class="hint">${p.onlineCount ? `✅ ${p.onlineCount} online ` : ""}${p.offlineCount ? `❌ ${p.offlineCount} offline ` : ""}${p.unknownCount ? `❔ ${p.unknownCount} wird geprüft` : ""}</div>
+        ${p.status ? `<div class="st">${esc(p.status)}</div>` : ""}
+        <button class="btn primary small" type="button" data-start="${p.uuid}">⬇ Download starten</button></div>`).join("")
+      : `<p class="hint" style="color:var(--muted)">Leer. Neue Links landen hier, bis der Download startet.</p>`;
+    const d = r.downloads || [];
+    $("#jd_downloads").innerHTML = d.length ? d.map(p => {
+      const pct = p.bytesTotal ? Math.min(100, Math.round(p.bytesLoaded / p.bytesTotal * 100)) : (p.finished ? 100 : 0);
+      const info = p.finished ? "✅ Fertig" : p.running ? `⬇ ${fmtSize(p.speed || 0)}/s${p.eta > 0 ? " · noch " + fmtEta(p.eta) : ""}` : (p.enabled === false ? "Deaktiviert" : "Wartet");
+      return `<div class="jdpkg"><b>${esc(p.name)}</b>
+        <div class="hint">${pct} % · ${fmtSize(p.bytesLoaded || 0)} von ${fmtSize(p.bytesTotal || 0)} · ${info}</div>
+        ${p.status && !p.finished ? `<div class="st">${esc(p.status)}</div>` : ""}
+        <div class="jdbar"><i style="width:${pct}%"></i></div></div>`;
+    }).join("") : `<p class="hint" style="color:var(--muted)">Keine Downloads.</p>`;
+    $("#jd_grabber").querySelectorAll("[data-start]").forEach(b => b.onclick = async () => {
+      b.disabled = true;
+      try { await api("/api/jd/start", {method: "POST", body: {ids: [b.dataset.start]}}); toast("Download gestartet"); refreshJd(); }
+      catch (e) { toast(e.message, true); b.disabled = false; }
+    });
+  } catch (e) { $("#jd_state").textContent = e.message; }
+}
+async function jdControl(action, msg) {
+  try { await api("/api/jd/control", {method: "POST", body: {action}}); toast(msg); refreshJd(); } catch (e) { toast(e.message, true); }
+}
+$("#jd_start").onclick = () => jdControl("start", "Downloads gestartet");
+$("#jd_pause").onclick = () => jdControl($("#jd_state").textContent.includes("Pausiert") ? "resume" : "pause", "Umgeschaltet");
+$("#jdbtn").onclick = openJd;
+$("#jd_x").onclick = () => closeJd();
+$("#jdscrim").onclick = e => { if (e.target === $("#jdscrim")) closeJd(); };
 
 /* Benachrichtigung */
 const BLUEPRINT = "https://github.com/2pac1991/mediasort/blob/main/homeassistant/mediasort-benachrichtigung.yaml";
@@ -1071,6 +1156,7 @@ let started = false;
 async function start(user) {
   me = user; renderMe();
   $("#linksbtn").hidden = !me.can_links;
+  if (me.can_links) api("/api/links").then(r => { jdLive = !!r.live; $("#jdbtn").hidden = !jdLive; }).catch(() => {});
   // Über "Teilen → Mediasort" (Android) geöffnet: Links direkt ins Fenster übernehmen
   if (location.pathname === "/cnl") handleCnl();
   else if (location.pathname === "/share") {
