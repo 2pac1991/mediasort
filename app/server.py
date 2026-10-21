@@ -8,7 +8,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import config, db, files, links, renamer, service, tmdb, users
+from . import config, db, files, links, myjd, renamer, service, tmdb, users
 
 VERSION = "1.1.0"
 STATIC = os.path.join(os.path.dirname(__file__), "static")
@@ -42,8 +42,10 @@ def public_settings():
     s = config.get()
     s["tmdb_api_key_set"] = bool(s.get("tmdb_api_key"))
     s["plex_token_set"] = bool(s.get("plex_token"))
+    s["myjd_password_set"] = bool(s.get("myjd_password"))
     s["tmdb_api_key"] = ""
     s["plex_token"] = ""
+    s["myjd_password"] = ""
     return s
 
 
@@ -125,7 +127,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, files.list_dir(q.get("root", ""), q.get("path", "")))
             if u.path == "/api/links":
                 self._need(add_links=True)
-                return self._send(200, {"items": db.list_links(), "configured": bool(config.get().get("jd_watch_dir"))})
+                return self._send(200, {"items": db.list_links(), "configured": links.configured()})
             if u.path == "/api/trash":
                 return self._send(200, {"items": files.list_trash(), "days": config.get().get("trash_days")})
             if u.path == "/api/status":
@@ -244,6 +246,12 @@ class Handler(BaseHTTPRequestHandler):
                     files.purge(tid)
                 return self._send(200, {"ok": True})
             # ---------- Einsortieren ----------
+            if u.path == "/api/myjd/test":
+                self._need(admin=True)
+                try:
+                    return self._send(200, {"devices": myjd.list_devices()})
+                except myjd.MyJDError as e:
+                    raise ValueError(str(e)) from e
             if u.path in ("/api/settings", "/api/test-tmdb", "/api/cache/clear"):
                 self._need(admin=True)
             if u.path == "/api/settings":
@@ -251,6 +259,10 @@ class Handler(BaseHTTPRequestHandler):
                     body.pop("tmdb_api_key", None)
                 if not body.get("plex_token") and not body.get("clear_plex_token"):
                     body.pop("plex_token", None)
+                if not body.get("myjd_password") and not body.get("clear_myjd"):
+                    body.pop("myjd_password", None)
+                if body.get("clear_myjd"):
+                    body.update(myjd_email="", myjd_password="", myjd_device="")
                 for key in ("input_dirs", "anime_keywords"):
                     if isinstance(body.get(key), str):
                         body[key] = [x.strip() for x in body[key].splitlines() if x.strip()]

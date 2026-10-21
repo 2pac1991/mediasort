@@ -5,7 +5,7 @@ import os
 import re
 import time
 
-from . import config, db
+from . import config, db, myjd
 
 URL_RE = re.compile(r"""https?://[^\s<>"'`]+""", re.IGNORECASE)
 MAX_LINKS = 500
@@ -22,18 +22,29 @@ def _clean_package(name):
     return re.sub(r"\s+", " ", name)[:120]
 
 
+def configured():
+    return myjd.configured() or bool((config.get().get("jd_watch_dir") or "").strip())
+
+
 def send(text, package, user):
     watch = (config.get().get("jd_watch_dir") or "").strip()
-    if not watch:
+    if not configured():
         raise ValueError("JDownloader ist noch nicht eingerichtet (Einstellungen → JDownloader)")
-    if not os.path.isdir(watch):
-        raise FileNotFoundError(f"Der JDownloader-Ordner {watch} existiert nicht")
     urls = extract(text)
     if not urls:
         raise ValueError("Keine Links gefunden. Links müssen mit http:// oder https:// beginnen.")
     if len(urls) > MAX_LINKS:
         raise ValueError(f"Höchstens {MAX_LINKS} Links auf einmal")
     package = _clean_package(package)
+    if myjd.configured():
+        try:
+            myjd.add_links(urls, package)
+        except myjd.MyJDError as e:
+            raise ValueError(str(e)) from e
+        db.add_links(user, package, urls)
+        return len(urls)
+    if not os.path.isdir(watch):
+        raise FileNotFoundError(f"Der JDownloader-Ordner {watch} existiert nicht")
     job = {
         "text": "\n".join(urls),
         "autoStart": "TRUE",

@@ -63,7 +63,9 @@ Mediasort braucht dafür Zugang zum Internet bzw. zur Home-Assistant-Adresse des
 
 Nutzer mit dem Recht „Darf Links senden" können im Eingang über **＋ Links senden** Links an JDownloader schicken (auf Android auch über **Teilen → Mediasort**). Mediasort legt dafür eine `.crawljob`-Datei in einen Ordner, den JDownloader überwacht.
 
-Einmalig einrichten:
+**Am einfachsten über My.JDownloader:** In Mediasort unter **Einstellungen → JDownloader** E-Mail und Passwort deines My.JDownloader-Kontos eintragen und **Verbinden & testen** drücken. Mediasort schickt die Links dann direkt an deinen JDownloader (wie die Handy-Apps), es ist nichts weiter einzurichten.
+
+Alternativ ohne My.JDownloader über einen überwachten Ordner:
 1. In JDownloader (Weboberfläche des Containers) unter **Einstellungen → Erweiterungen** die Erweiterung **Folder Watch** aktivieren.
 2. Unter **Einstellungen → Erweiterte Einstellungen** nach `FolderWatch` suchen und bei **Folders** den Ordner eintragen, z. B. `["/output/.mediasort-links"]` (so sieht ihn der JDownloader-Container).
 3. Den Ordner anlegen: `/mnt/user/Plex/Downloads/.mediasort-links`.

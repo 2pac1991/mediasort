@@ -36,6 +36,10 @@ DEFAULTS = {
     "trash_days": 14,
     # Ordner, den JDownloader mit der Erweiterung "Folder Watch" überwacht (Auftragsdateien .crawljob)
     "jd_watch_dir": "",
+    # Alternativ direkt über My.JDownloader (wie die Handy-Apps)
+    "myjd_email": "",
+    "myjd_password": "",
+    "myjd_device": "",
 }
 
 _lock = threading.Lock()

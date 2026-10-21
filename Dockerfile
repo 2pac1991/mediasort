@@ -14,6 +14,9 @@ RUN apk add --no-cache su-exec tzdata bash curl ca-certificates jq iptables ip6t
 LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/2pac1991/mediasort/main/unraid/icon.png" \
       net.unraid.docker.webui="http://[IP]:[PORT:8484]/"
 
+# cryptography: Verschlüsselung für die My.JDownloader-API
+RUN pip install --no-cache-dir cryptography==44.0.0
+
 WORKDIR /opt/mediasort
 COPY app ./app
 COPY entrypoint.sh /entrypoint.sh

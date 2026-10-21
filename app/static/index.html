@@ -320,9 +320,17 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
       </div>
       <div class="card">
         <h2>JDownloader</h2>
-        <p class="hint">Damit Nutzer Links senden können: In JDownloader unter <i>Einstellungen → Erweiterungen</i> <b>Folder Watch</b> aktivieren und in den erweiterten Einstellungen bei <i>FolderWatch: Folders</i> den Ordner eintragen, wie ihn JDownloader sieht (z. B. <code>/output/.mediasort-links</code>). Hier denselben Ordner so eintragen, wie ihn Mediasort sieht.</p>
-        <label class="f" for="jd_watch_dir">Überwachter Ordner (Pfad in Mediasort)</label>
-        <input type="text" id="jd_watch_dir" name="jd_watch_dir" placeholder="/data/Downloads/.mediasort-links">
+        <p class="hint">Damit Nutzer über „＋ Links senden“ Downloads starten können. Am einfachsten mit deinem <b>My.JDownloader</b>-Konto, wie in den Handy-Apps.</p>
+        <label class="f" for="myjd_email">My.JDownloader E-Mail</label>
+        <input type="text" id="myjd_email" name="myjd_email" autocomplete="off">
+        <label class="f" for="myjd_password">My.JDownloader Passwort</label>
+        <input type="password" id="myjd_password" name="myjd_password" placeholder="Passwort eingeben" autocomplete="new-password">
+        <label class="f" for="myjd_device">Gerät</label>
+        <div class="inline"><select id="myjd_device" name="myjd_device"><option value="">Erstes gefundenes</option></select><button type="button" class="btn small" id="myjdtest">Verbinden &amp; testen</button></div>
+        <details style="margin-top:14px"><summary class="hint" style="cursor:pointer;color:var(--muted)">Alternative ohne My.JDownloader: überwachter Ordner</summary>
+          <p class="hint">In JDownloader die Erweiterung <b>Folder Watch</b> aktivieren und bei <i>FolderWatch: Folders</i> z. B. <code>/output/.mediasort-links</code> eintragen. Hier denselben Ordner so eintragen, wie ihn Mediasort sieht.</p>
+          <input type="text" id="jd_watch_dir" name="jd_watch_dir" placeholder="/data/Downloads/.mediasort-links">
+        </details>
       </div>
 
       <div class="card">
@@ -704,6 +712,10 @@ function fill(s) {
   }
   $("#tmdb_api_key").placeholder = s.tmdb_api_key_set ? "Gespeichert (zum Ändern neu eingeben)" : "Noch kein Key";
   $("#plex_token").placeholder = s.plex_token_set ? "Gespeichert (zum Ändern neu eingeben)" : "Optional";
+  $("#myjd_password").placeholder = s.myjd_password_set ? "Gespeichert (zum Ändern neu eingeben)" : "Passwort eingeben";
+  if (s.myjd_device && ![...$("#myjd_device").options].some(o => o.value === s.myjd_device))
+    $("#myjd_device").add(new Option(s.myjd_device, s.myjd_device));
+  $("#myjd_device").value = s.myjd_device || "";
   $("#thrv").textContent = Math.round(s.auto_threshold * 100) + " %";
   previews();
 }
@@ -731,7 +743,7 @@ F.onsubmit = async e => {
     else if (el.type === "number" || el.type === "range") body[el.name] = Number(el.value);
     else body[el.name] = el.value;
   }
-  try { fill(await api("/api/settings", {method: "POST", body})); F.tmdb_api_key.value = ""; F.plex_token.value = ""; toast("Gespeichert"); status(); }
+  try { fill(await api("/api/settings", {method: "POST", body})); F.tmdb_api_key.value = ""; F.plex_token.value = ""; F.myjd_password.value = ""; toast("Gespeichert"); status(); }
   catch (err) { toast(err.message, true); }
 };
 $("#testtmdb").onclick = async () => {
@@ -740,6 +752,22 @@ $("#testtmdb").onclick = async () => {
     if (key) { await api("/api/settings", {method: "POST", body: {tmdb_api_key: key}}); F.tmdb_api_key.value = ""; }
     await api("/api/test-tmdb", {method: "POST"}); toast("TMDB-Verbindung funktioniert"); loadSettings();
   } catch (e) { toast(e.message, true); }
+};
+$("#myjdtest").onclick = async () => {
+  const b = $("#myjdtest"); b.disabled = true; b.textContent = "Verbinde …";
+  try {
+    const body = {myjd_email: F.myjd_email.value.trim()};
+    if (F.myjd_password.value) body.myjd_password = F.myjd_password.value;
+    await api("/api/settings", {method: "POST", body}); F.myjd_password.value = "";
+    const r = await api("/api/myjd/test", {method: "POST"});
+    const keep = F.myjd_device.value;
+    F.myjd_device.innerHTML = `<option value="">Erstes gefundenes</option>` + r.devices.map(d => `<option value="${esc(d.name)}">${esc(d.name)}</option>`).join("");
+    F.myjd_device.value = r.devices.some(d => d.name === keep) ? keep : (r.devices[0]?.name || "");
+    await api("/api/settings", {method: "POST", body: {myjd_device: F.myjd_device.value}});
+    toast(r.devices.length ? `Verbunden: ${r.devices.map(d => d.name).join(", ")}` : "Verbunden, aber kein JDownloader online", !r.devices.length);
+    loadSettings();
+  } catch (e) { toast(e.message, true); }
+  b.disabled = false; b.textContent = "Verbinden & testen";
 };
 $("#clearcache").onclick = async () => { await api("/api/cache/clear", {method: "POST"}); toast("Cache geleert"); };
 
