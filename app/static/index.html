@@ -141,6 +141,11 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
 .toast.err{background:var(--bad);color:#fff}
 .toast[hidden]{display:none}
 
+/* Fenster-Kopf mit Schließen-Knopf, bleibt beim Scrollen oben */
+.sheethead{position:sticky;top:-22px;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--panel);margin:-22px -22px 0;padding:22px 22px 8px}
+.sheethead h2{margin:0}
+.xbtn{flex-shrink:0;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--ink);color:var(--text);font-size:16px;cursor:pointer}
+
 /* Benachrichtigung */
 .steps{padding-left:20px;margin:14px 0 0}
 .steps li{margin-bottom:16px}
@@ -419,7 +424,7 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
 
 <div class="scrim" id="hookscrim" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="hooktitle">
-    <h2 id="hooktitle">Benachrichtigung</h2>
+    <div class="sheethead"><h2 id="hooktitle">Benachrichtigung</h2><button class="xbtn" type="button" id="hook_x" aria-label="Schließen">✕</button></div>
     <p class="hint" style="color:var(--muted);margin:0 0 6px">Bekomme eine Nachricht aufs Handy, sobald ein Film oder eine Folge einsortiert wurde. Du brauchst dafür Home Assistant mit der Handy-App.</p>
     <ol class="steps">
       <li><b>Vorlage importieren</b>
@@ -443,7 +448,7 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
 
 <div class="scrim" id="linkscrim" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="linkstitle">
-    <h2 id="linkstitle">Links an JDownloader senden</h2>
+    <div class="sheethead"><h2 id="linkstitle">Links an JDownloader senden</h2><button class="xbtn" type="button" id="lk_x" aria-label="Schließen">✕</button></div>
     <p class="hint" style="color:var(--muted);margin:0">Links einfügen, auch ganze Nachrichten. Mediasort sucht die Links heraus, JDownloader lädt sie in den Download-Ordner, danach wird automatisch einsortiert.</p>
     <p class="hint" id="lk_android" style="color:var(--muted);margin:8px 0 0" hidden>Tipp: Auf Android kannst du Links auch direkt über <b>Teilen → Mediasort</b> schicken.</p>
     <label class="f" for="lk_text">Links</label>
@@ -785,7 +790,9 @@ function openLinks(prefill) {
   $("#lk_android").hidden = !/Android/.test(navigator.userAgent);
   $("#cnlcode").value = cnlBookmarklet();
   countLinks(); loadLinkHist();
-  $("#linkscrim").hidden = false; $("#lk_text").focus();
+  if ($("#linkscrim").hidden) history.pushState({sheet: "links"}, "");
+  $("#linkscrim").hidden = false;
+  if (!prefill) $("#lk_text").focus();
 }
 function countLinks() {
   const n = new Set($("#lk_text").value.match(linkRe) || []).size;
@@ -834,12 +841,21 @@ $("#lk_send").onclick = async () => {
   try {
     const r = await api("/api/links", {method: "POST", body: {text: $("#lk_text").value, package: $("#lk_pkg").value}});
     toast(`${r.count} ${r.count === 1 ? "Link" : "Links"} an JDownloader gesendet`);
-    $("#lk_text").value = ""; $("#lk_pkg").value = ""; countLinks(); loadLinkHist();
+    $("#lk_text").value = ""; $("#lk_pkg").value = ""; countLinks();
+    closeLinks();
   } catch (e) { toast(e.message, true); }
   b.disabled = false;
 };
-$("#lk_close").onclick = () => $("#linkscrim").hidden = true;
-$("#linkscrim").onclick = e => { if (e.target === $("#linkscrim")) $("#linkscrim").hidden = true; };
+// Fenster schließen; die Zurück-Geste des Handys schließt es ebenfalls, statt Mediasort zu verlassen
+function closeLinks(fromHistory) {
+  if ($("#linkscrim").hidden) return;
+  $("#linkscrim").hidden = true;
+  if (!fromHistory && history.state && history.state.sheet === "links") history.back();
+}
+window.addEventListener("popstate", () => closeLinks(true));
+$("#lk_close").onclick = () => closeLinks();
+$("#lk_x").onclick = () => closeLinks();
+$("#linkscrim").onclick = e => { if (e.target === $("#linkscrim")) closeLinks(); };
 
 /* Benachrichtigung */
 const BLUEPRINT = "https://github.com/2pac1991/mediasort/blob/main/homeassistant/mediasort-benachrichtigung.yaml";
@@ -888,6 +904,7 @@ $("#hookoff").onclick = async () => {
   try { await saveHook(""); toast("Benachrichtigung ausgeschaltet"); $("#hookscrim").hidden = true; } catch (e) { toast(e.message, true); }
 };
 $("#hookclose").onclick = () => $("#hookscrim").hidden = true;
+$("#hook_x").onclick = () => $("#hookscrim").hidden = true;
 $("#hookscrim").onclick = e => { if (e.target === $("#hookscrim")) $("#hookscrim").hidden = true; };
 
 /* Dateien */
