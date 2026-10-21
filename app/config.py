@@ -31,6 +31,9 @@ DEFAULTS = {
     "plex_url": "",
     "plex_token": "",
     "webhook_url": "",
+    # Papierkorb für gelöschte Dateien (muss auf demselben Mount wie die Mediathek liegen)
+    "trash_dir": "/data/.mediasort-papierkorb",
+    "trash_days": 14,
 }
 
 _lock = threading.Lock()

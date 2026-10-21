@@ -9,7 +9,7 @@
   <Privileged>false</Privileged>
   <Support/>
   <Project>https://github.com/2pac1991/mediasort</Project>
-  <Overview>Erkennt Filme, Serien und Anime per TMDB und sortiert sie im Plex-Schema ein (Hardlink, Verschieben oder Kopieren). Mit Web-Oberfläche, Watch-Ordner und Rückgängig.</Overview>
+  <Overview>Erkennt Filme, Serien und Anime per TMDB und sortiert sie im Plex-Schema ein (Hardlink, Verschieben oder Kopieren). Mit Web-Oberfläche, Watch-Ordner, Rückgängig, Dateiverwaltung mit Papierkorb und eigenen Konten für Freunde.</Overview>
   <Category>MediaApp:Other Tools:</Category>
   <WebUI>http://[IP]:[PORT:8484]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/2pac1991/mediasort/main/unraid/my-Mediasort.xml</TemplateURL>
@@ -28,5 +28,5 @@
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Benutzer-ID" Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
   <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Gruppen-ID" Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
   <Config Name="TMDB API-Key" Target="TMDB_API_KEY" Default="" Mode="" Description="Optional, kann auch in der Oberfläche eingetragen werden" Type="Variable" Display="always" Required="false" Mask="true"/>
-  <Config Name="Passwort" Target="UI_PASSWORD" Default="" Mode="" Description="Optionaler Passwortschutz der Oberfläche (Benutzername egal)" Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="Passwort" Target="UI_PASSWORD" Default="" Mode="" Description="Optional: Setup-Code, der beim Anlegen des ersten Admin-Kontos abgefragt wird. Danach melden sich alle mit eigenem Konto an." Type="Variable" Display="always" Required="false" Mask="true"/>
 </Container>

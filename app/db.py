@@ -42,6 +42,15 @@ def init(path):
                 extras TEXT,
                 undone INTEGER DEFAULT 0
             );
+            CREATE TABLE IF NOT EXISTS trash (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts REAL,
+                user TEXT,
+                orig TEXT,
+                stored TEXT,
+                is_dir INTEGER,
+                size INTEGER
+            );
             CREATE TABLE IF NOT EXISTS cache (
                 key TEXT PRIMARY KEY,
                 value TEXT,
@@ -186,4 +195,31 @@ def cache_set(key, value):
 def cache_clear():
     with _lock:
         _conn.execute("DELETE FROM cache")
+        _conn.commit()
+
+
+def add_trash(user, orig, stored, is_dir, size):
+    with _lock:
+        cur = _conn.execute(
+            "INSERT INTO trash (ts, user, orig, stored, is_dir, size) VALUES (?,?,?,?,?,?)",
+            (time.time(), user, orig, stored, 1 if is_dir else 0, size),
+        )
+        _conn.commit()
+        return cur.lastrowid
+
+
+def list_trash():
+    with _lock:
+        return [dict(r) for r in _conn.execute("SELECT * FROM trash ORDER BY ts DESC")]
+
+
+def get_trash(tid):
+    with _lock:
+        r = _conn.execute("SELECT * FROM trash WHERE id=?", (tid,)).fetchone()
+        return dict(r) if r else None
+
+
+def delete_trash(tid):
+    with _lock:
+        _conn.execute("DELETE FROM trash WHERE id=?", (tid,))
         _conn.commit()

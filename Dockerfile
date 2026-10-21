@@ -22,6 +22,6 @@ EXPOSE 8484
 VOLUME ["/config"]
 
 HEALTHCHECK --interval=60s --timeout=5s --start-period=20s \
-  CMD wget -qO- http://127.0.0.1:${PORT}/api/status >/dev/null || exit 1
+  CMD wget -qO- http://127.0.0.1:${PORT}/api/health >/dev/null || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]

@@ -8,7 +8,7 @@ import time
 import urllib.parse
 import urllib.request
 
-from . import config, db, matcher, parser, renamer, tmdb
+from . import config, db, files, matcher, parser, renamer, tmdb
 
 log = logging.getLogger("mediasort")
 scan_lock = threading.Lock()
@@ -174,7 +174,14 @@ def notify(results):
 def watch_loop(stop_event):
     """Watch-Ordner: neue Dateien erkennen, sobald sie fertig geschrieben sind, sichere Treffer automatisch einsortieren."""
     sizes = {}
+    last_purge = 0
     while not stop_event.is_set():
+        if time.time() - last_purge > 3600:
+            last_purge = time.time()
+            try:
+                files.purge_expired()
+            except Exception:  # noqa: BLE001
+                log.exception("Papierkorb leeren fehlgeschlagen")
         s = config.get()
         interval = max(15, int(s.get("watch_interval") or 60))
         if s.get("watch_enabled") and s.get("tmdb_api_key"):

@@ -1,20 +1,25 @@
 """HTTP-Server mit JSON-API und Web-Oberfläche (nur Python-Standardbibliothek)."""
-import base64
-import hmac
 import json
 import logging
 import os
 import re
 import threading
+from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import config, db, renamer, service, tmdb
+from . import config, db, files, renamer, service, tmdb, users
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 STATIC = os.path.join(os.path.dirname(__file__), "static")
-PASSWORD = os.environ.get("UI_PASSWORD", "")
+# Früherer Einzel-Passwortschutz: wenn gesetzt, muss er beim Anlegen des ersten Admins angegeben werden
+SETUP_CODE = os.environ.get("UI_PASSWORD", "")
+COOKIE = "mediasort_session"
 log = logging.getLogger("mediasort")
+
+# Ohne Anmeldung erreichbar
+PUBLIC = {"/", "/index.html", "/icon.png", "/api/health", "/api/auth/me", "/api/auth/login", "/api/auth/setup",
+          "/api/auth/logout"}
 
 
 def retarget_open_items():
@@ -42,24 +47,21 @@ class Handler(BaseHTTPRequestHandler):
         log.debug("%s - %s", self.address_string(), fmt % args)
 
     # ---------- Helfer ----------
-    def _auth_ok(self):
-        if not PASSWORD:
-            return True
-        h = self.headers.get("Authorization", "")
-        if h.startswith("Basic "):
-            try:
-                _, pw = base64.b64decode(h[6:]).decode().split(":", 1)
-                return hmac.compare_digest(pw, PASSWORD)
-            except Exception:  # noqa: BLE001
-                return False
-        return False
+    def _user(self):
+        c = SimpleCookie(self.headers.get("Cookie", ""))
+        return users.check_token(c[COOKIE].value) if COOKIE in c else None
 
-    def _send(self, code, body, ctype="application/json; charset=utf-8"):
+    def _send(self, code, body, ctype="application/json; charset=utf-8", cookie=None):
         data = body if isinstance(body, bytes) else json.dumps(body, ensure_ascii=False).encode()
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        if cookie is not None:
+            age = users.SESSION_DAYS * 86400 if cookie else 0
+            self.send_header("Set-Cookie", f"{COOKIE}={cookie}; Max-Age={age}; Path=/; HttpOnly; SameSite=Lax")
         self.end_headers()
         self.wfile.write(data)
 
@@ -69,25 +71,50 @@ class Handler(BaseHTTPRequestHandler):
             return {}
         return json.loads(self.rfile.read(n).decode("utf-8"))
 
-    def _guard(self):
-        if self._auth_ok():
+    def _guard(self, path, post=False):
+        """Setzt self.me; liefert False (und hat schon geantwortet), wenn der Zugriff nicht erlaubt ist."""
+        # Schutz gegen Formular-Posts von fremden Seiten: API-Aufrufe kommen immer als JSON
+        if post and not self.headers.get("Content-Type", "").startswith("application/json"):
+            self._send(415, {"error": "JSON erwartet"})
+            return False
+        self.me = self._user()
+        if path in PUBLIC or self.me:
             return True
-        self.send_response(401)
-        self.send_header("WWW-Authenticate", 'Basic realm="Mediasort"')
-        self.send_header("Content-Length", "0")
-        self.end_headers()
+        self._send(401, {"error": "Bitte anmelden", "setup": not users.has_users()})
         return False
+
+    def _need(self, admin=False, delete=False):
+        if admin and self.me["role"] != "admin":
+            raise PermissionError("Nur für Admins")
+        if delete and not self.me["can_delete"]:
+            raise PermissionError("Du darfst nichts löschen")
 
     # ---------- Routing ----------
     def do_GET(self):
-        if not self._guard():
-            return
         u = urlparse(self.path)
+        if not self._guard(u.path):
+            return
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         try:
             if u.path in ("/", "/index.html"):
                 with open(os.path.join(STATIC, "index.html"), "rb") as f:
                     return self._send(200, f.read(), "text/html; charset=utf-8")
+            if u.path == "/icon.png":
+                with open(os.path.join(STATIC, "icon.png"), "rb") as f:
+                    return self._send(200, f.read(), "image/png")
+            if u.path == "/api/health":
+                return self._send(200, {"ok": True})
+            if u.path == "/api/auth/me":
+                return self._send(200, {"user": self.me, "setup": not users.has_users()})
+            if u.path == "/api/users":
+                self._need(admin=True)
+                return self._send(200, users.list_users())
+            if u.path == "/api/files/roots":
+                return self._send(200, [{"key": k, "name": n} for k, (n, _) in files.roots().items()])
+            if u.path == "/api/files":
+                return self._send(200, files.list_dir(q.get("root", ""), q.get("path", "")))
+            if u.path == "/api/trash":
+                return self._send(200, {"items": files.list_trash(), "days": config.get().get("trash_days")})
             if u.path == "/api/status":
                 s = config.get()
                 return self._send(200, {
@@ -117,16 +144,73 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(404, {"error": "Nicht gefunden"})
         except tmdb.TMDBError as e:
             return self._send(502, {"error": str(e)})
+        except PermissionError as e:
+            return self._send(403, {"error": str(e)})
+        except (OSError, ValueError, KeyError) as e:
+            return self._send(400, {"error": str(e)})
         except Exception as e:  # noqa: BLE001
             log.exception("GET %s", self.path)
             return self._send(500, {"error": str(e)})
 
     def do_POST(self):
-        if not self._guard():
-            return
         u = urlparse(self.path)
+        if not self._guard(u.path, post=True):
+            return
         try:
             body = self._json()
+            # ---------- Anmeldung ----------
+            if u.path == "/api/auth/setup":
+                if users.has_users():
+                    raise PermissionError("Es gibt schon einen Admin")
+                if SETUP_CODE and body.get("setup_code") != SETUP_CODE:
+                    raise PermissionError("Falscher Setup-Code (UI_PASSWORD)")
+                me = users.save_user(body.get("name"), body.get("password"), role="admin", can_delete=True, create=True)
+                return self._send(200, {"user": me}, cookie=users.make_token(me["name"]))
+            if u.path == "/api/auth/login":
+                name = users.verify(body.get("name"), body.get("password"), self.client_address[0])
+                if not name:
+                    return self._send(401, {"error": "Name oder Passwort falsch"})
+                return self._send(200, {"user": users.get(name)}, cookie=users.make_token(name))
+            if u.path == "/api/auth/logout":
+                return self._send(200, {"ok": True}, cookie="")
+            if u.path == "/api/auth/password":
+                users._check_password(body.get("password"))
+                if not users.verify(self.me["name"], body.get("old_password"), self.client_address[0]):
+                    raise PermissionError("Altes Passwort stimmt nicht")
+                me = users.save_user(self.me["name"], body.get("password"), self.me["role"], self.me["can_delete"])
+                return self._send(200, {"user": me}, cookie=users.make_token(me["name"]))
+            # ---------- Nutzerverwaltung (Admin) ----------
+            if u.path == "/api/users":
+                self._need(admin=True)
+                return self._send(200, users.save_user(
+                    body.get("name"), body.get("password") or None, body.get("role", "user"),
+                    body.get("can_delete", False), create=bool(body.get("create"))))
+            if u.path == "/api/users/delete":
+                self._need(admin=True)
+                if body.get("name") == self.me["name"]:
+                    raise ValueError("Du kannst dich nicht selbst löschen")
+                users.delete_user(body.get("name"))
+                return self._send(200, {"ok": True})
+            # ---------- Dateien ----------
+            if u.path == "/api/files/delete":
+                self._need(delete=True)
+                tid = files.delete(body.get("root", ""), body.get("path", ""), self.me["name"])
+                log.info("%s hat %s/%s gelöscht (Papierkorb #%s)", self.me["name"], body.get("root"), body.get("path"), tid)
+                return self._send(200, {"ok": True, "trash_id": tid})
+            if u.path == "/api/files/rename":
+                name = files.rename(body.get("root", ""), body.get("path", ""), body.get("name"), self.me["name"])
+                return self._send(200, {"ok": True, "name": name})
+            if u.path == "/api/trash/restore":
+                return self._send(200, {"ok": True, "path": files.restore(int(body["id"]))})
+            if u.path == "/api/trash/purge":
+                self._need(admin=True)
+                ids = [t["id"] for t in db.list_trash()] if body.get("all") else [int(body["id"])]
+                for tid in ids:
+                    files.purge(tid)
+                return self._send(200, {"ok": True})
+            # ---------- Einsortieren ----------
+            if u.path in ("/api/settings", "/api/test-tmdb", "/api/cache/clear"):
+                self._need(admin=True)
             if u.path == "/api/settings":
                 if not body.get("tmdb_api_key"):
                     body.pop("tmdb_api_key", None)
@@ -173,8 +257,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(404, {"error": "Nicht gefunden"})
         except tmdb.TMDBError as e:
             return self._send(502, {"error": str(e)})
+        except PermissionError as e:
+            return self._send(403, {"error": str(e)})
+        except FileExistsError as e:
+            return self._send(409, {"error": str(e)})
         except (OSError, ValueError, KeyError) as e:
-            return self._send(400, {"error": str(e)})
+            return self._send(400, {"error": getattr(e, "strerror", None) or str(e)})
         except Exception as e:  # noqa: BLE001
             log.exception("POST %s", self.path)
             return self._send(500, {"error": str(e)})

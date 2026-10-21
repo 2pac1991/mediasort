@@ -133,16 +133,56 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
 .toast.err{background:var(--bad);color:#fff}
 .toast[hidden]{display:none}
 
+/* Anmeldung */
+.auth{position:fixed;inset:0;z-index:30;background:var(--ink);display:grid;place-items:center;padding:20px}
+.auth[hidden]{display:none}
+.auth form{width:min(380px,100%);background:var(--panel);border-radius:var(--r-lg);padding:26px 24px}
+.auth img{width:64px;height:64px;border-radius:16px;display:block;margin-bottom:14px}
+.auth h1{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:34px;margin:0 0 4px}
+.auth p{color:var(--muted);font-size:14px;margin:0 0 6px}
+.auth .btn{width:100%;margin-top:18px;padding:11px}
+.auth .err{color:var(--bad);font-size:14px;margin-top:12px;min-height:1em}
+.me{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.me b{color:var(--text);font-weight:600}
+.brand img{width:30px;height:30px;border-radius:8px;align-self:center}
+
+/* Dateien */
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:4px 0 14px;font-size:14px}
+.crumbs button{border:0;background:none;color:var(--amber);cursor:pointer;padding:2px 4px;border-radius:6px}
+.crumbs button:last-child{color:var(--text);font-weight:600;cursor:default}
+.crumbs .sep{color:var(--muted)}
+.frow{display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:center;background:var(--panel);border-radius:var(--r-lg);padding:10px 12px;border:1px solid transparent}
+.frow.dir{cursor:pointer}
+.frow.dir:hover{border-color:var(--line)}
+.ficon{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;background:var(--panel-2);font-size:17px}
+.fname{font-weight:500;word-break:break-word}
+.fmeta{font-size:12px;color:var(--muted);margin-top:2px}
+.factions{display:flex;gap:6px}
+.btn.danger{color:var(--bad);border-color:rgba(239,122,107,.35)}
+.tools input[type=search]{width:auto;min-width:160px;flex:1;max-width:280px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 11px}
+.tools select.small{width:auto;background:var(--panel);padding:8px 10px}
+.ulist{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.urow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:var(--ink);border-radius:var(--r-sm);padding:10px 12px}
+.urow b{flex:1;min-width:100px}
+.urow label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.urow input[type=checkbox]{accent-color:var(--amber)}
+.urow select{width:auto;padding:5px 8px}
+.badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(242,179,61,.15);color:var(--amber)}
+
 @media (max-width:700px){
   .bar{padding:12px 14px;gap:10px}
-  nav{margin-left:0;width:100%;justify-content:space-between}
-  nav button{flex:1}
+  nav{margin-left:0;width:100%;justify-content:space-between;overflow-x:auto}
+  nav button{flex:1;min-width:0;padding:7px 4px;font-size:13px}
+  .tools input[type=search]{max-width:none}
   main{padding:16px 12px 120px}
   .row{grid-template-columns:24px 44px 1fr;padding:10px}
   .poster{width:44px}
   .meta{grid-column:3;flex-direction:row;align-items:center;justify-content:flex-start;min-width:0}
   .msg{text-align:left}
   th:nth-child(3),td:nth-child(3){display:none}
+  .frow{grid-template-columns:32px 1fr;}
+  .factions{grid-column:2}
+  .me{margin-left:auto}
   .dock{padding:6px 6px 6px 14px;gap:8px;font-size:14px}
   .dock .btn{padding:8px 12px}
 }
@@ -151,12 +191,14 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
 <body>
 <header>
   <div class="bar">
-    <div class="brand">Mediasort <small id="ver"></small></div>
+    <div class="brand"><img src="icon.png" alt="">Mediasort <small id="ver"></small></div>
     <div class="watch" id="watch"><span class="dot"></span><span>Watch-Ordner aus</span></div>
+    <div class="me" id="me"></div>
     <nav role="tablist">
       <button role="tab" aria-selected="true" data-tab="inbox">Eingang</button>
+      <button role="tab" aria-selected="false" data-tab="files">Dateien</button>
       <button role="tab" aria-selected="false" data-tab="history">Verlauf</button>
-      <button role="tab" aria-selected="false" data-tab="settings">Einstellungen</button>
+      <button role="tab" aria-selected="false" data-tab="settings" id="tabSettings">Einstellungen</button>
     </nav>
   </div>
 </header>
@@ -170,6 +212,19 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
       <div class="filters" id="filters"></div>
     </div>
     <div class="list" id="list"></div>
+  </section>
+
+  <section id="tab-files" hidden>
+    <div class="tools">
+      <div class="filters" id="froots"></div>
+      <span class="grow"></span>
+      <input type="search" id="fq" placeholder="In diesem Ordner suchen">
+      <select class="small" id="fsort" aria-label="Sortierung">
+        <option value="name">Name</option><option value="new">Neueste zuerst</option><option value="size">Größte zuerst</option>
+      </select>
+    </div>
+    <div class="crumbs" id="crumbs"></div>
+    <div class="list" id="flist"></div>
   </section>
 
   <section id="tab-history" hidden>
@@ -248,6 +303,25 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
         <p class="hint">Optionaler Webhook, z. B. für eine Home-Assistant-Automation. Bekommt Anzahl und Dateinamen als JSON.</p>
         <label class="f" for="webhook_url">Webhook-URL</label><input type="text" id="webhook_url" name="webhook_url" placeholder="http://homeassistant:8123/api/webhook/mediasort">
       </div>
+      <div class="card">
+        <h2>Papierkorb</h2>
+        <p class="hint">Gelöschte Dateien landen erst im Papierkorb und können wiederhergestellt werden.</p>
+        <label class="f" for="trash_days">Endgültig löschen nach (Tagen)</label>
+        <input type="number" id="trash_days" name="trash_days" min="1">
+      </div>
+
+      <div class="card" style="grid-column:1/-1">
+        <h2>Nutzer</h2>
+        <p class="hint">Jeder bekommt ein eigenes Konto. Admins dürfen alles, inklusive Einstellungen. Nutzer dürfen sortieren, Dateien ansehen und umbenennen, und löschen, wenn es erlaubt ist.</p>
+        <div class="ulist" id="ulist"></div>
+        <div class="inline" style="flex-wrap:wrap">
+          <input type="text" id="nu_name" placeholder="Name" style="flex:1;min-width:120px" autocomplete="off">
+          <input type="password" id="nu_pw" placeholder="Passwort (min. 6 Zeichen)" style="flex:1;min-width:160px" autocomplete="new-password">
+          <label class="switch" style="margin:0"><input type="checkbox" id="nu_del"> Darf löschen</label>
+          <button class="btn" type="button" id="nu_add">Nutzer anlegen</button>
+        </div>
+      </div>
+
       <div class="card" style="grid-column:1/-1">
         <h2>Benennung</h2>
         <p class="hint">Platzhalter: {title} {year} {tmdbid} {show} {season:2} {episode:2} {eptitle}. Ein / erzeugt einen Ordner. {tmdb-{tmdbid}} hilft Plex bei der Zuordnung.</p>
@@ -299,19 +373,69 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
   </div>
 </div>
 
+<div class="auth" id="auth" hidden>
+  <form id="authform" autocomplete="on">
+    <img src="icon.png" alt="">
+    <h1 id="authtitle">Anmelden</h1>
+    <p id="authhint">Melde dich mit deinem Mediasort-Konto an.</p>
+    <label class="f" for="a_name">Name</label><input type="text" id="a_name" autocomplete="username" required>
+    <label class="f" for="a_pw">Passwort</label><input type="password" id="a_pw" autocomplete="current-password" required>
+    <div id="a_codewrap" hidden><label class="f" for="a_code">Setup-Code (UI_PASSWORD aus dem Container)</label><input type="password" id="a_code"></div>
+    <button class="btn primary" type="submit" id="a_btn">Anmelden</button>
+    <div class="err" id="a_err"></div>
+  </form>
+</div>
+
 <div class="toast" id="toast" hidden></div>
 
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-let items = [], selected = new Set(), filter = "open", settings = {}, sheet = null;
+let items = [], selected = new Set(), filter = "open", settings = {}, sheet = null, me = null;
 
 async function api(path, opts = {}) {
   const r = await fetch(path, {headers: {"Content-Type": "application/json"}, ...opts,
-    body: opts.body ? JSON.stringify(opts.body) : undefined});
+    body: opts.method === "POST" ? JSON.stringify(opts.body || {}) : undefined});
   const data = await r.json().catch(() => ({}));
+  if (r.status === 401 && !path.startsWith("/api/auth/")) { showAuth(data.setup); throw new Error("Bitte anmelden"); }
   if (!r.ok) throw new Error(data.error || "Fehler " + r.status);
   return data;
+}
+
+/* Anmeldung */
+let setupMode = false;
+function showAuth(setup) {
+  setupMode = !!setup;
+  $("#authtitle").textContent = setup ? "Willkommen" : "Anmelden";
+  $("#authhint").textContent = setup ? "Lege zuerst dein Admin-Konto an. Danach kannst du in den Einstellungen Konten für deine Freunde erstellen." : "Melde dich mit deinem Mediasort-Konto an.";
+  $("#a_btn").textContent = setup ? "Admin-Konto anlegen" : "Anmelden";
+  $("#a_pw").autocomplete = setup ? "new-password" : "current-password";
+  $("#a_codewrap").hidden = true; $("#a_err").textContent = "";
+  $("#auth").hidden = false; $("#a_name").focus();
+}
+$("#authform").onsubmit = async e => {
+  e.preventDefault();
+  const body = {name: $("#a_name").value, password: $("#a_pw").value, setup_code: $("#a_code").value};
+  try {
+    const r = await api(setupMode ? "/api/auth/setup" : "/api/auth/login", {method: "POST", body});
+    $("#a_pw").value = ""; $("#auth").hidden = true; await start(r.user);
+  } catch (err) {
+    $("#a_err").textContent = err.message;
+    if (/Setup-Code/.test(err.message)) $("#a_codewrap").hidden = false;
+  }
+};
+function renderMe() {
+  $("#me").innerHTML = me ? `<span>👤 <b>${esc(me.name)}</b>${me.role === "admin" ? ' <span class="badge">Admin</span>' : ""}</span>
+    <button class="btn ghost small" id="pwbtn" type="button">Passwort</button><button class="btn ghost small" id="logout" type="button">Abmelden</button>` : "";
+  $("#tabSettings").hidden = !me || me.role !== "admin";
+  if (!me) return;
+  $("#logout").onclick = async () => { await api("/api/auth/logout", {method: "POST"}); location.reload(); };
+  $("#pwbtn").onclick = async () => {
+    const old = prompt("Aktuelles Passwort:"); if (old === null) return;
+    const neu = prompt("Neues Passwort (min. 6 Zeichen):"); if (neu === null) return;
+    try { await api("/api/auth/password", {method: "POST", body: {old_password: old, password: neu}}); toast("Passwort geändert"); }
+    catch (e) { toast(e.message, true); }
+  };
 }
 function toast(msg, err) {
   const t = $("#toast"); t.textContent = msg; t.className = "toast" + (err ? " err" : ""); t.hidden = false;
@@ -321,9 +445,10 @@ function toast(msg, err) {
 /* Tabs */
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
   document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
-  ["inbox","history","settings"].forEach(t => $("#tab-" + t).hidden = t !== b.dataset.tab);
+  ["inbox","files","history","settings"].forEach(t => $("#tab-" + t).hidden = t !== b.dataset.tab);
   if (b.dataset.tab === "history") loadHistory();
-  if (b.dataset.tab === "settings") loadSettings();
+  if (b.dataset.tab === "settings") { loadSettings(); loadUsers(); }
+  if (b.dataset.tab === "files") loadFiles();
   updateDock();
 });
 
@@ -548,6 +673,151 @@ $("#testtmdb").onclick = async () => {
 };
 $("#clearcache").onclick = async () => { await api("/api/cache/clear", {method: "POST"}); toast("Cache geleert"); };
 
+/* Dateien */
+let fstate = {root: null, path: "", data: null, roots: [], trash: null};
+const fmtSize = n => n == null ? "" : n >= 1e9 ? (n / 1e9).toFixed(1).replace(".", ",") + " GB" : n >= 1e6 ? Math.round(n / 1e6) + " MB" : Math.max(1, Math.round(n / 1e3)) + " KB";
+const fmtDate = t => new Date(t * 1000).toLocaleString("de-AT", {dateStyle: "short", timeStyle: "short"});
+async function loadFiles() {
+  try {
+    fstate.roots = await api("/api/files/roots");
+    if (!fstate.root) fstate.root = fstate.roots[0]?.key || "trash";
+    await openDir(fstate.root, fstate.path);
+  } catch (e) { toast(e.message, true); }
+}
+function renderRoots() {
+  const all = [...fstate.roots, {key: "trash", name: "🗑 Papierkorb"}];
+  $("#froots").innerHTML = all.map(r => `<button class="chip" data-k="${r.key}" aria-pressed="${fstate.root === r.key}">${esc(r.name)}</button>`).join("");
+  $("#froots").querySelectorAll("button").forEach(b => b.onclick = () => openDir(b.dataset.k, ""));
+}
+async function openDir(root, path) {
+  fstate.root = root; fstate.path = path || ""; $("#fq").value = "";
+  renderRoots();
+  try {
+    if (root === "trash") { fstate.trash = await api("/api/trash"); fstate.data = null; }
+    else { fstate.data = await api(`/api/files?root=${encodeURIComponent(root)}&path=${encodeURIComponent(fstate.path)}`); fstate.path = fstate.data.path; }
+  } catch (e) { toast(e.message, true); fstate.data = {entries: []}; }
+  renderFiles();
+}
+function renderCrumbs() {
+  if (fstate.root === "trash") { $("#crumbs").innerHTML = ""; return; }
+  const name = (fstate.roots.find(r => r.key === fstate.root) || {}).name || "";
+  const parts = fstate.path ? fstate.path.split("/") : [];
+  const btns = [`<button data-p="">${esc(name)}</button>`].concat(parts.map((p, i) =>
+    `<span class="sep">/</span><button data-p="${esc(parts.slice(0, i + 1).join("/"))}">${esc(p)}</button>`));
+  $("#crumbs").innerHTML = btns.join("");
+  $("#crumbs").querySelectorAll("button").forEach(b => b.onclick = () => openDir(fstate.root, b.dataset.p));
+}
+function renderFiles() {
+  renderCrumbs();
+  const q = $("#fq").value.trim().toLowerCase();
+  if (fstate.root === "trash") return renderTrash(q);
+  let list = (fstate.data?.entries || []).filter(e => !q || e.name.toLowerCase().includes(q));
+  const sort = $("#fsort").value;
+  list.sort((a, b) => (b.dir - a.dir) || (sort === "new" ? b.mtime - a.mtime : sort === "size" ? (b.size || 0) - (a.size || 0) : a.name.localeCompare(b.name, "de", {numeric: true})));
+  if (!list.length) { $("#flist").innerHTML = `<div class="empty"><h3>${q ? "Nichts gefunden" : "Leer"}</h3>${q ? "Kein Eintrag passt zur Suche." : "In diesem Ordner liegt nichts."}</div>`; return; }
+  $("#flist").innerHTML = list.map(e => `<div class="frow ${e.dir ? "dir" : ""}" data-n="${esc(e.name)}">
+      <div class="ficon">${e.dir ? "📁" : e.video ? "🎬" : "📄"}</div>
+      <div style="min-width:0"><div class="fname">${esc(e.name)}</div>
+        <div class="fmeta">${e.dir ? `${e.count} ${e.count === 1 ? "Eintrag" : "Einträge"}` : fmtSize(e.size)} · ${fmtDate(e.mtime)}</div></div>
+      <div class="factions">
+        <button class="btn small" data-act="rename" type="button">Umbenennen</button>
+        ${me && me.can_delete ? `<button class="btn small danger" data-act="delete" type="button">Löschen</button>` : ""}
+      </div></div>`).join("");
+  $("#flist").querySelectorAll(".frow").forEach(row => {
+    const name = row.dataset.n, rel = (fstate.path ? fstate.path + "/" : "") + name;
+    if (row.classList.contains("dir")) row.onclick = () => openDir(fstate.root, rel);
+    row.querySelectorAll("[data-act]").forEach(b => b.onclick = async ev => {
+      ev.stopPropagation();
+      if (b.dataset.act === "rename") {
+        const neu = prompt("Neuer Name:", name);
+        if (!neu || neu === name) return;
+        try { await api("/api/files/rename", {method: "POST", body: {root: fstate.root, path: rel, name: neu}}); toast("Umbenannt"); openDir(fstate.root, fstate.path); }
+        catch (e) { toast(e.message, true); }
+      } else {
+        if (!confirm(`„${name}“ in den Papierkorb verschieben?`)) return;
+        try {
+          const r = await api("/api/files/delete", {method: "POST", body: {root: fstate.root, path: rel}});
+          toastUndo(`„${name}“ gelöscht`, r.trash_id);
+          openDir(fstate.root, fstate.path);
+        } catch (e) { toast(e.message, true); }
+      }
+    });
+  });
+}
+function toastUndo(msg, tid) {
+  const t = $("#toast");
+  t.innerHTML = `${esc(msg)} <button class="btn small" style="margin-left:8px" type="button">Rückgängig</button>`;
+  t.className = "toast"; t.hidden = false;
+  t.querySelector("button").onclick = async () => {
+    try { await api("/api/trash/restore", {method: "POST", body: {id: tid}}); toast("Wiederhergestellt"); openDir(fstate.root, fstate.path); }
+    catch (e) { toast(e.message, true); }
+  };
+  clearTimeout(t._h); t._h = setTimeout(() => t.hidden = true, 7000);
+}
+function renderTrash(q) {
+  const list = (fstate.trash?.items || []).filter(t => !q || t.name.toLowerCase().includes(q));
+  const admin = me && me.role === "admin";
+  const head = `<p class="hint" style="color:var(--muted);margin:0 0 6px">Wird nach ${fstate.trash?.days || 14} Tagen automatisch endgültig gelöscht.
+    ${admin && list.length ? `<button class="btn small danger" id="purgeall" type="button" style="margin-left:8px">Papierkorb leeren</button>` : ""}</p>`;
+  if (!list.length) { $("#flist").innerHTML = head + `<div class="empty"><h3>Papierkorb ist leer</h3>Gelöschte Dateien erscheinen hier und können wiederhergestellt werden.</div>`; }
+  else $("#flist").innerHTML = head + list.map(t => `<div class="frow" data-id="${t.id}">
+      <div class="ficon">${t.is_dir ? "📁" : "🎬"}</div>
+      <div style="min-width:0"><div class="fname">${esc(t.name)}</div>
+        <div class="fmeta">${fmtSize(t.size)} · gelöscht von ${esc(t.user)} am ${fmtDate(t.ts)}<br>${esc(t.orig)}</div></div>
+      <div class="factions">
+        <button class="btn small" data-act="restore" type="button">Wiederherstellen</button>
+        ${admin ? `<button class="btn small danger" data-act="purge" type="button">Endgültig löschen</button>` : ""}
+      </div></div>`).join("");
+  const pa = $("#purgeall");
+  if (pa) pa.onclick = async () => {
+    if (!confirm("Alle Dateien im Papierkorb endgültig löschen? Das kann nicht rückgängig gemacht werden.")) return;
+    try { await api("/api/trash/purge", {method: "POST", body: {all: true}}); toast("Papierkorb geleert"); openDir("trash"); } catch (e) { toast(e.message, true); }
+  };
+  $("#flist").querySelectorAll(".frow[data-id]").forEach(row => row.querySelectorAll("[data-act]").forEach(b => b.onclick = async () => {
+    const id = +row.dataset.id;
+    try {
+      if (b.dataset.act === "restore") { await api("/api/trash/restore", {method: "POST", body: {id}}); toast("Wiederhergestellt"); }
+      else { if (!confirm("Endgültig löschen? Das kann nicht rückgängig gemacht werden.")) return; await api("/api/trash/purge", {method: "POST", body: {id}}); toast("Endgültig gelöscht"); }
+      openDir("trash");
+    } catch (e) { toast(e.message, true); }
+  }));
+}
+$("#fq").oninput = renderFiles;
+$("#fsort").onchange = renderFiles;
+
+/* Nutzerverwaltung */
+async function loadUsers() {
+  if (!me || me.role !== "admin") return;
+  const list = await api("/api/users");
+  $("#ulist").innerHTML = list.map(u => `<div class="urow" data-n="${esc(u.name)}">
+      <b>${esc(u.name)}${u.name === me.name ? " (du)" : ""}</b>
+      <select data-f="role" aria-label="Rolle"><option value="user" ${u.role === "user" ? "selected" : ""}>Nutzer</option><option value="admin" ${u.role === "admin" ? "selected" : ""}>Admin</option></select>
+      <label><input type="checkbox" data-f="del" ${u.can_delete ? "checked" : ""} ${u.role === "admin" ? "disabled" : ""}> Darf löschen</label>
+      <button class="btn small" type="button" data-f="pw">Passwort setzen</button>
+      ${u.name === me.name ? "" : `<button class="btn small danger" type="button" data-f="rm">Entfernen</button>`}
+    </div>`).join("");
+  $("#ulist").querySelectorAll(".urow").forEach(row => {
+    const name = row.dataset.n, role = row.querySelector("[data-f=role]"), del = row.querySelector("[data-f=del]");
+    const save = async (password) => {
+      try { await api("/api/users", {method: "POST", body: {name, role: role.value, can_delete: del.checked, password}}); toast("Gespeichert"); loadUsers(); }
+      catch (e) { toast(e.message, true); loadUsers(); }
+    };
+    role.onchange = () => save(); del.onchange = () => save();
+    row.querySelector("[data-f=pw]").onclick = () => { const pw = prompt(`Neues Passwort für ${name} (min. 6 Zeichen):`); if (pw) save(pw); };
+    const rm = row.querySelector("[data-f=rm]");
+    if (rm) rm.onclick = async () => {
+      if (!confirm(`Konto „${name}“ entfernen?`)) return;
+      try { await api("/api/users/delete", {method: "POST", body: {name}}); toast("Entfernt"); loadUsers(); } catch (e) { toast(e.message, true); }
+    };
+  });
+}
+$("#nu_add").onclick = async () => {
+  try {
+    await api("/api/users", {method: "POST", body: {name: $("#nu_name").value, password: $("#nu_pw").value, can_delete: $("#nu_del").checked, role: "user", create: true}});
+    $("#nu_name").value = ""; $("#nu_pw").value = ""; $("#nu_del").checked = false; toast("Nutzer angelegt"); loadUsers();
+  } catch (e) { toast(e.message, true); }
+};
+
 /* Status */
 async function status() {
   try {
@@ -559,10 +829,20 @@ async function status() {
   } catch (e) {}
 }
 
-(async () => {
+let started = false;
+async function start(user) {
+  me = user; renderMe();
+  if (me.role !== "admin" && !$("#tab-settings").hidden) document.querySelector('nav button[data-tab="inbox"]').click();
   await loadSettings(); await loadItems(); status();
+  if (started) return;
+  started = true;
   setInterval(status, 30000);
-  setInterval(() => { if (!$("#tab-inbox").hidden && !sheet && !selected.size) loadItems(filter === "all"); }, 30000);
+  setInterval(() => { if (me && !$("#tab-inbox").hidden && !sheet && !selected.size) loadItems(filter === "all"); }, 30000);
+}
+
+(async () => {
+  const r = await api("/api/auth/me").catch(() => ({}));
+  if (r.user) start(r.user); else showAuth(r.setup);
 })();
 </script>
 </body>

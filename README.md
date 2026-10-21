@@ -43,5 +43,6 @@ Jede Änderung auf `main` baut automatisch ein neues Image (`ghcr.io/2pac1991/me
 - **Alten FileBot-Watch stoppen**, sonst sortieren beide denselben Download-Ordner.
 - Hardlinks auf `/mnt/user` gehen nur, wenn Quelle und Ziel auf derselben Platte landen. Sonst greift der Fallback (Standard: kopieren).
 - Mit JDownloader wird nicht geseedet. Wenn der Download-Ordner nicht voll bleiben soll, ist „Verschieben" die bessere Aktion.
-- Passwortschutz: Variable `UI_PASSWORD` setzen.
+- Anmeldung: Beim ersten Aufruf legst du ein Admin-Konto an. In den Einstellungen unter „Nutzer" bekommt jeder Freund ein eigenes Konto, wahlweise mit Löschrecht. Ist `UI_PASSWORD` gesetzt, wird es beim Anlegen des ersten Admins als Setup-Code abgefragt.
+- Dateien: Im Reiter „Dateien" lassen sich Downloads, Filme, Serien und Anime durchsuchen, umbenennen und löschen. Gelöschtes landet im Papierkorb (`/data/.mediasort-papierkorb`) und wird nach 14 Tagen endgültig entfernt.
 - Webhook-Daten: `{"count": 2, "files": ["Dark (2017) - s02e03 - Geister.mkv", ...]}`
