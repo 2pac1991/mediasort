@@ -10,6 +10,9 @@ ENV PYTHONUNBUFFERED=1 \
 
 RUN apk add --no-cache su-exec tzdata
 
+LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/2pac1991/mediasort/main/unraid/icon.png" \
+      net.unraid.docker.webui="http://[IP]:[PORT:8484]/"
+
 WORKDIR /opt/mediasort
 COPY app ./app
 COPY entrypoint.sh /entrypoint.sh

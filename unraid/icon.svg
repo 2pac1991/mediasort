@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22303f"/>
+      <stop offset="1" stop-color="#121a24"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3c96b"/>
+      <stop offset="1" stop-color="#dfa53e"/>
+    </linearGradient>
+    <linearGradient id="goldBack" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c88f2f"/>
+      <stop offset="1" stop-color="#a87422"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- Filmstreifen, der in den Ordner sortiert wird -->
+  <g transform="rotate(-12 256 170)">
+    <rect x="150" y="92" width="212" height="128" rx="16" fill="#eef2f7"/>
+    <g fill="#22303f">
+      <rect x="166" y="104" width="18" height="14" rx="3"/><rect x="196" y="104" width="18" height="14" rx="3"/>
+      <rect x="226" y="104" width="18" height="14" rx="3"/><rect x="256" y="104" width="18" height="14" rx="3"/>
+      <rect x="286" y="104" width="18" height="14" rx="3"/><rect x="316" y="104" width="18" height="14" rx="3"/>
+      <rect x="166" y="194" width="18" height="14" rx="3"/><rect x="196" y="194" width="18" height="14" rx="3"/>
+      <rect x="226" y="194" width="18" height="14" rx="3"/><rect x="256" y="194" width="18" height="14" rx="3"/>
+      <rect x="286" y="194" width="18" height="14" rx="3"/><rect x="316" y="194" width="18" height="14" rx="3"/>
+      <rect x="166" y="128" width="80" height="56" rx="6" opacity="0.85"/>
+      <rect x="256" y="128" width="80" height="56" rx="6" opacity="0.85"/>
+    </g>
+  </g>
+  <!-- Ordner -->
+  <path d="M92 218 h104 l30 30 h194 a22 22 0 0 1 22 22 v148 a26 26 0 0 1 -26 26 h-302 a26 26 0 0 1 -26 -26 v-174 a26 26 0 0 1 26 -26z" fill="url(#goldBack)"/>
+  <path d="M70 286 a24 24 0 0 1 24 -24 h324 a24 24 0 0 1 24 24 v130 a28 28 0 0 1 -28 28 h-316 a28 28 0 0 1 -28 -28z" fill="url(#gold)"/>
+  <!-- Play-Symbol -->
+  <path d="M232 312 v84 a8 8 0 0 0 12 7 l68 -42 a8 8 0 0 0 0 -14 l-68 -42 a8 8 0 0 0 -12 7z" fill="#18212d"/>
+</svg>
