@@ -8,7 +8,8 @@ ENV PYTHONUNBUFFERED=1 \
     PGID=100 \
     UMASK=002
 
-RUN apk add --no-cache su-exec tzdata
+# bash, curl, jq, iptables, iproute2: braucht das Tailscale-Startskript von Unraid ("Use Tailscale")
+RUN apk add --no-cache su-exec tzdata bash curl ca-certificates jq iptables ip6tables iproute2
 
 LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/2pac1991/mediasort/main/unraid/icon.png" \
       net.unraid.docker.webui="http://[IP]:[PORT:8484]/"
