@@ -141,6 +141,12 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
 .toast.err{background:var(--bad);color:#fff}
 .toast[hidden]{display:none}
 
+/* Benachrichtigung */
+.steps{padding-left:20px;margin:14px 0 0}
+.steps li{margin-bottom:16px}
+.steps .hint{color:var(--muted);font-size:13px;margin-top:6px}
+#hookstate{color:var(--muted)}
+
 /* Anmeldung */
 .auth{position:fixed;inset:0;z-index:30;background:var(--ink);display:grid;place-items:center;padding:20px}
 .auth[hidden]{display:none}
@@ -394,6 +400,30 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
   </form>
 </div>
 
+<div class="scrim" id="hookscrim" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="hooktitle">
+    <h2 id="hooktitle">Benachrichtigung</h2>
+    <p class="hint" style="color:var(--muted);margin:0 0 6px">Bekomme eine Nachricht aufs Handy, sobald ein Film oder eine Folge einsortiert wurde. Du brauchst dafür Home Assistant mit der Handy-App.</p>
+    <ol class="steps">
+      <li><b>Vorlage importieren</b>
+        <a class="btn primary" id="hookimport" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;text-decoration:none">Vorlage in Home Assistant öffnen</a>
+        <div class="hint">Öffnet deinen Home Assistant. Dort „Blueprint importieren“ bestätigen und anschließend <b>Automation erstellen</b>.</div></li>
+      <li><b>Diese Webhook-ID in der Vorlage eintragen</b> und dein Handy auswählen
+        <div class="inline" style="margin-top:8px"><input type="text" id="hookid" readonly><button class="btn small" type="button" id="hookcopy">Kopieren</button></div>
+        <div class="hint">Als Mediasort-Adresse kannst du <span id="hookself"></span> eintragen.</div></li>
+      <li><b>Adresse deines Home Assistant</b>
+        <input type="text" id="hookbase" placeholder="https://xyz.ui.nabu.casa" style="margin-top:8px" autocomplete="off">
+        <div class="hint">Die Adresse, unter der dein Home Assistant von außen erreichbar ist. Mit Home Assistant Cloud kannst du stattdessen auch die Webhook-Adresse aus <i>Einstellungen → Home Assistant Cloud → Webhooks</i> einfügen.</div></li>
+    </ol>
+    <div class="actions">
+      <button class="btn primary" type="button" id="hooksave">Speichern &amp; Test senden</button>
+      <button class="btn" type="button" id="hookoff">Ausschalten</button>
+      <button class="btn ghost" type="button" id="hookclose">Schließen</button>
+    </div>
+    <div class="hint" id="hookstate" style="margin-top:12px"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -426,7 +456,9 @@ $("#authform").onsubmit = async e => {
   const body = {name: $("#a_name").value, password: $("#a_pw").value, setup_code: $("#a_code").value};
   try {
     const r = await api(setupMode ? "/api/auth/setup" : "/api/auth/login", {method: "POST", body});
-    $("#a_pw").value = ""; $("#auth").hidden = true; await start(r.user);
+    $("#a_pw").value = ""; $("#auth").hidden = true;
+    const full = await api("/api/auth/me").catch(() => ({}));
+    await start(full.user || r.user);
   } catch (err) {
     $("#a_err").textContent = err.message;
     if (/Setup-Code/.test(err.message)) $("#a_codewrap").hidden = false;
@@ -439,18 +471,7 @@ function renderMe() {
   $("#tabSettings").hidden = !me || me.role !== "admin";
   if (!me) return;
   $("#logout").onclick = async () => { await api("/api/auth/logout", {method: "POST"}); location.reload(); };
-  $("#hookbtn").onclick = async () => {
-    const url = prompt("Benachrichtigung in deinem Home Assistant:\nWebhook-Adresse aus der Mediasort-Vorlage einfügen (leer lassen = aus).", me.webhook_url || "");
-    if (url === null) return;
-    try {
-      const r = await api("/api/me/webhook", {method: "POST", body: {url}});
-      me.webhook_url = r.webhook_url;
-      if (!r.webhook_url) return toast("Benachrichtigung ausgeschaltet");
-      if (confirm("Gespeichert. Jetzt eine Test-Benachrichtigung schicken?")) {
-        await api("/api/me/webhook/test", {method: "POST"}); toast("Test gesendet, schau auf dein Handy");
-      } else toast("Gespeichert");
-    } catch (e) { toast(e.message, true); }
-  };
+  $("#hookbtn").onclick = openHook;
   $("#pwbtn").onclick = async () => {
     const old = prompt("Aktuelles Passwort:"); if (old === null) return;
     const neu = prompt("Neues Passwort (min. 6 Zeichen):"); if (neu === null) return;
@@ -693,6 +714,55 @@ $("#testtmdb").onclick = async () => {
   } catch (e) { toast(e.message, true); }
 };
 $("#clearcache").onclick = async () => { await api("/api/cache/clear", {method: "POST"}); toast("Cache geleert"); };
+
+/* Benachrichtigung */
+const BLUEPRINT = "https://github.com/2pac1991/mediasort/blob/main/homeassistant/mediasort-benachrichtigung.yaml";
+function hookParts(url) {
+  const m = (url || "").match(/^(https?:\/\/[^/]+)\/api\/webhook\/([^/?#]+)/);
+  return m ? {base: m[1], id: m[2]} : {base: url || "", id: null};
+}
+function openHook() {
+  const parts = hookParts(me.webhook_url);
+  const id = parts.id || "mediasort-" + Array.from(crypto.getRandomValues(new Uint8Array(8)), b => b.toString(16).padStart(2, "0")).join("");
+  $("#hookid").value = id;
+  $("#hookbase").value = me.webhook_url ? (parts.id ? parts.base : me.webhook_url) : "";
+  $("#hookimport").href = "https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=" + encodeURIComponent(BLUEPRINT);
+  $("#hookself").textContent = location.origin + "/";
+  $("#hookstate").textContent = me.webhook_url ? "Aktiv: " + me.webhook_url : "Noch nicht eingerichtet.";
+  $("#hookoff").hidden = !me.webhook_url;
+  $("#hookscrim").hidden = false;
+}
+function hookUrl() {
+  const v = $("#hookbase").value.trim().replace(/\/+$/, "");
+  if (!v) return "";
+  // Komplette Webhook-Adresse (z. B. aus Home Assistant Cloud) unverändert übernehmen
+  if (/\/api\/webhook\/|hooks\.nabu\.casa/.test(v)) return v;
+  return (/^https?:\/\//.test(v) ? v : "https://" + v) + "/api/webhook/" + $("#hookid").value;
+}
+async function saveHook(url) {
+  const r = await api("/api/me/webhook", {method: "POST", body: {url}});
+  me.webhook_url = r.webhook_url;
+}
+$("#hookcopy").onclick = async () => {
+  try { await navigator.clipboard.writeText($("#hookid").value); toast("Webhook-ID kopiert"); }
+  catch (e) { $("#hookid").select(); toast("Markiert, bitte kopieren"); }
+};
+$("#hooksave").onclick = async () => {
+  const url = hookUrl();
+  if (!url) return toast("Bitte die Adresse deines Home Assistant eintragen", true);
+  try {
+    await saveHook(url);
+    $("#hookstate").textContent = "Gespeichert, sende Test …";
+    await api("/api/me/webhook/test", {method: "POST"});
+    $("#hookstate").textContent = "Aktiv: " + url; $("#hookoff").hidden = false;
+    toast("Test gesendet, schau auf dein Handy");
+  } catch (e) { $("#hookstate").textContent = e.message; toast(e.message, true); }
+};
+$("#hookoff").onclick = async () => {
+  try { await saveHook(""); toast("Benachrichtigung ausgeschaltet"); $("#hookscrim").hidden = true; } catch (e) { toast(e.message, true); }
+};
+$("#hookclose").onclick = () => $("#hookscrim").hidden = true;
+$("#hookscrim").onclick = e => { if (e.target === $("#hookscrim")) $("#hookscrim").hidden = true; };
 
 /* Dateien */
 let fstate = {root: null, path: "", data: null, roots: [], trash: null};
