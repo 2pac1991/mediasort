@@ -40,6 +40,8 @@ DEFAULTS = {
     "myjd_email": "",
     "myjd_password": "",
     "myjd_device": "",
+    # Dateien im Linksammler entfernen, die schon in der Mediathek liegen
+    "jd_skip_existing": True,
 }
 
 _lock = threading.Lock()

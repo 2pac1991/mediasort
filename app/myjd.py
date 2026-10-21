@@ -212,3 +212,47 @@ def control(action):
         _device_call("/downloadcontroller/pause", [False])
     else:
         raise ValueError("Unbekannte Aktion")
+
+
+LINK_QUERY = {"bytesTotal": True, "bytesLoaded": True, "status": True, "availability": True, "host": True,
+              "finished": True, "running": True, "enabled": True, "maxResults": -1, "startAt": 0}
+_removed = []  # zuletzt automatisch entfernte Dateien, für die Anzeige
+
+
+def links(kind, package_ids):
+    """Einzelne Dateien eines oder mehrerer Pakete (kind: grabber oder downloads)."""
+    path = "/linkgrabberv2/queryLinks" if kind == "grabber" else "/downloadsV2/queryLinks"
+    return _device_call(path, [dict(LINK_QUERY, packageUUIDs=[int(i) for i in package_ids])]) or []
+
+
+def remove(kind, link_ids=(), package_ids=()):
+    """Aus dem Linksammler bzw. der Downloadliste löschen. Bei unfertigen Downloads auch die Teildateien."""
+    lids, pids = [int(i) for i in link_ids], [int(i) for i in package_ids]
+    if kind == "grabber":
+        _device_call("/linkgrabberv2/removeLinks", [lids, pids])
+    else:
+        _device_call("/downloadsV2/cleanup", [lids, pids, "DELETE_ALL", "REMOVE_LINKS_AND_DELETE_FILES", "SELECTED"])
+
+
+def remove_existing():
+    """Dateien im Linksammler entfernen, die schon in der Mediathek sind. Liefert die entfernten Namen."""
+    from . import library
+    packages = _device_call("/linkgrabberv2/queryPackages", [{"childCount": True, "maxResults": -1, "startAt": 0}]) or []
+    if not packages:
+        return []
+    found = links("grabber", [p["uuid"] for p in packages])
+    dupes = [(l, library.exists(l.get("name") or "")) for l in found]
+    dupes = [(l, why) for l, why in dupes if why]
+    if not dupes:
+        return []
+    remove("grabber", [l["uuid"] for l, _ in dupes])
+    names = [f"{l.get('name')} ({why})" for l, why in dupes]
+    with _lock:
+        _removed[:0] = [{"ts": time.time(), "text": n} for n in names]
+        del _removed[30:]
+    return names
+
+
+def recently_removed():
+    with _lock:
+        return list(_removed)

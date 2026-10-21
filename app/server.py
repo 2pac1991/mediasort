@@ -8,7 +8,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import config, db, files, links, myjd, renamer, service, tmdb, users
+from . import config, db, files, library, links, myjd, renamer, service, tmdb, users
 
 VERSION = "1.1.0"
 STATIC = os.path.join(os.path.dirname(__file__), "static")
@@ -131,7 +131,17 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/jd/status":
                 self._need(add_links=True)
                 try:
-                    return self._send(200, myjd.status())
+                    if config.get().get("jd_skip_existing"):
+                        myjd.remove_existing()
+                    st = myjd.status()
+                    # Dateien der aufgeklappten Pakete gleich mitliefern
+                    for kind in ("grabber", "downloads"):
+                        ids = [i for i in q.get("open_" + kind, "").split(",") if i.isdigit()]
+                        st["links_" + kind] = myjd.links(kind, ids) if ids else []
+                    for l in st["links_grabber"]:
+                        l["existing"] = library.exists(l.get("name") or "")
+                    st["removed"] = myjd.recently_removed()[:5]
+                    return self._send(200, st)
                 except myjd.MyJDError as e:
                     raise ValueError(str(e)) from e
             if u.path == "/api/trash":
@@ -241,6 +251,15 @@ class Handler(BaseHTTPRequestHandler):
                         myjd.start_packages(body.get("ids") or [])
                     else:
                         myjd.control(body.get("action"))
+                    return self._send(200, {"ok": True})
+                except myjd.MyJDError as e:
+                    raise ValueError(str(e)) from e
+            if u.path == "/api/jd/remove":
+                self._need(add_links=True)
+                try:
+                    kind = "grabber" if body.get("kind") == "grabber" else "downloads"
+                    myjd.remove(kind, body.get("links") or [], body.get("packages") or [])
+                    log.info("%s hat im JDownloader gelöscht: %s", self.me["name"], body.get("name", ""))
                     return self._send(200, {"ok": True})
                 except myjd.MyJDError as e:
                     raise ValueError(str(e)) from e

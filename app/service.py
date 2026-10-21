@@ -8,7 +8,7 @@ import time
 import urllib.parse
 import urllib.request
 
-from . import config, db, files, matcher, parser, renamer, tmdb, users
+from . import config, db, files, library, matcher, myjd, parser, renamer, tmdb, users
 
 log = logging.getLogger("mediasort")
 scan_lock = threading.Lock()
@@ -144,6 +144,7 @@ def apply_items(ids):
         results.append({"id": iid, "ok": ok, "message": msg, "history": hid, "target": it["target"]})
         done_any = done_any or (ok and hid)
     if done_any:
+        library.refresh()
         notify([r for r in results if r["ok"] and r["history"]])
     return results
 
@@ -215,6 +216,7 @@ def watch_loop(stop_event):
     """Watch-Ordner: neue Dateien erkennen, sobald sie fertig geschrieben sind, sichere Treffer automatisch einsortieren."""
     sizes = {}
     last_purge = 0
+    last_dedupe = 0
     while not stop_event.is_set():
         if time.time() - last_purge > 3600:
             last_purge = time.time()
@@ -223,6 +225,14 @@ def watch_loop(stop_event):
             except Exception:  # noqa: BLE001
                 log.exception("Papierkorb leeren fehlgeschlagen")
         s = config.get()
+        if s.get("jd_skip_existing") and myjd.configured() and time.time() - last_dedupe > 60:
+            last_dedupe = time.time()
+            try:
+                removed = myjd.remove_existing()
+                if removed:
+                    log.info("Schon vorhanden, aus dem JDownloader-Linksammler entfernt: %s", ", ".join(removed))
+            except Exception as e:  # noqa: BLE001
+                log.debug("Abgleich mit JDownloader nicht möglich: %s", e)
         interval = max(15, int(s.get("watch_interval") or 60))
         if s.get("watch_enabled") and s.get("tmdb_api_key"):
             state["watch_running"] = True
