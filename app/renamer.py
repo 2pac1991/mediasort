@@ -4,7 +4,7 @@ import os
 import re
 import shutil
 
-from . import db
+from . import db, files
 
 TOKEN = re.compile(r"\{(\w+)(?::(\d+))?\}")
 ILLEGAL = re.compile(r'[<>"|?*\x00-\x1f]')
@@ -114,9 +114,16 @@ def apply(item, settings, companions=()):
     if os.path.abspath(src) == os.path.abspath(dst):
         return True, "Bereits korrekt benannt", None
     if os.path.exists(dst):
+        mode = settings["on_conflict"]
+        if mode == "trash_source" and action != "rename":
+            # Schon in der Mediathek: doppelten Download (samt Untertiteln) in den Papierkorb
+            for path in [src] + [c["path"] for c in companions]:
+                if os.path.lexists(path):
+                    files.trash_path(path, "Mediasort")
+            _remove_empty_dirs(src, settings.get("input_dirs") or [])
+            return True, "Schon in der Mediathek, Download in den Papierkorb verschoben", None
         if os.path.samefile(src, dst):
             return True, "Ziel ist bereits verlinkt", None
-        mode = settings["on_conflict"]
         if mode == "skip":
             return False, "Ziel existiert bereits (übersprungen)", None
         if mode == "keep_both":

@@ -88,10 +88,15 @@ def delete(root_key, rel, user):
         raise PermissionError("Der Hauptordner kann nicht gelöscht werden")
     if not os.path.lexists(full):
         raise FileNotFoundError("Existiert nicht mehr")
+    return trash_path(full, user)
+
+
+def trash_path(full, user):
+    """Verschiebt eine Datei oder einen Ordner in den Papierkorb und merkt sich den Ursprung."""
     s = config.get()
     is_dir = os.path.isdir(full)
     size = _size(full)
-    stored = os.path.join(s["trash_dir"], f"{int(time.time() * 1000)}", os.path.basename(full))
+    stored = os.path.join(s["trash_dir"], f"{time.time_ns()}", os.path.basename(full))
     _move(full, stored)
     return db.add_trash(user, full, stored, is_dir, size)
 
