@@ -71,6 +71,36 @@ def send(text, package, user):
 JK_HEX = re.compile(r"""['"]([0-9a-fA-F]{32})['"]""")
 
 
+def _aes_links(key, crypted):
+    try:
+        data = base64.b64decode(crypted.replace(" ", "+"))
+        if len(data) < 16:
+            return []
+        dec = Cipher(algorithms.AES(key), modes.CBC(key)).decryptor()
+        plain = (dec.update(data[: len(data) // 16 * 16]) + dec.finalize()).decode("utf-8", errors="ignore")
+    except Exception:  # noqa: BLE001
+        return []
+    return extract(plain.replace("\x00", " "))
+
+
+def decode_candidates(keys, crypts):
+    """Für Seiten, die ihr CNL-Formular erst per Skript bauen: das Lesezeichen schickt alle Schlüssel- und
+    Daten-Kandidaten der Seite, hier wird jede Kombination probiert. Nur Ergebnisse mit echten Links zählen."""
+    keys = [k for k in dict.fromkeys(keys) if re.fullmatch(r"[0-9a-fA-F]{32}", k)][:40]
+    crypts = [c for c in dict.fromkeys(crypts) if len(c) >= 24][:80]
+    found = []
+    for c in crypts:
+        for k in keys:
+            got = _aes_links(bytes.fromhex(k), c)
+            if got:
+                found += got
+                break
+    found = list(dict.fromkeys(found))
+    if not found:
+        raise ValueError("Auf der Seite wurden keine Click'n'Load-Daten gefunden")
+    return found
+
+
 def decode_cnl(crypted="", jk="", urls=""):
     """Click'n'Load: die Links aus einem CNL-Knopf entschlüsseln.
 
@@ -84,14 +114,7 @@ def decode_cnl(crypted="", jk="", urls=""):
     m = JK_HEX.search(jk)
     if not m:
         raise ValueError("Click'n'Load-Schlüssel nicht lesbar (diese Seite nutzt ein unbekanntes Verfahren)")
-    key = bytes.fromhex(m.group(1))
-    try:
-        data = base64.b64decode(crypted.replace(" ", "+"))
-        dec = Cipher(algorithms.AES(key), modes.CBC(key)).decryptor()
-        plain = (dec.update(data[: len(data) // 16 * 16]) + dec.finalize()).decode("utf-8", errors="ignore")
-    except Exception as e:  # noqa: BLE001
-        raise ValueError("Click'n'Load-Daten konnten nicht entschlüsselt werden") from e
-    found = extract(plain.replace("\x00", " "))
+    found = _aes_links(bytes.fromhex(m.group(1)), crypted)
     if not found:
         raise ValueError("Keine Links in den Click'n'Load-Daten")
     return found

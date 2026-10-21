@@ -230,7 +230,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"ok": True, "count": n})
             if u.path == "/api/cnl/decode":
                 self._need(add_links=True)
-                return self._send(200, {"urls": links.decode_cnl(body.get("crypted", ""), body.get("jk", ""), body.get("urls", ""))})
+                if body.get("keys") and body.get("crypts"):
+                    found = links.decode_candidates(body["keys"].split(","), body["crypts"].split(","))
+                else:
+                    found = links.decode_cnl(body.get("crypted", ""), body.get("jk", ""), body.get("urls", ""))
+                return self._send(200, {"urls": found})
             # ---------- Dateien ----------
             if u.path == "/api/files/delete":
                 self._need(delete=True)

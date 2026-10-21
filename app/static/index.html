@@ -803,7 +803,7 @@ async function loadLinkHist() {
 }
 // Lesezeichen (Bookmarklet): liest auf einer Download-Seite die Click'n'Load-Felder aus und öffnet damit Mediasort
 function cnlBookmarklet() {
-  const code = `(function(){var M=${JSON.stringify(location.origin)};var F=[].slice.call(document.querySelectorAll('form')).filter(function(f){return /9666|flash\\/add/.test(f.action||'')});var p=new URLSearchParams();if(F.length){['crypted','jk','urls','passwords','source','package'].forEach(function(n){var e=F[0].querySelector('[name="'+n+'"]');if(e&&e.value)p.set(n,e.value)})}if(!p.has('crypted')&&!p.has('urls')){var l=[].slice.call(document.querySelectorAll('a[href^="http"]')).map(function(a){return a.href});p.set('urls',[location.href].concat(l).join(' '));p.set('nocnl','1')}p.set('from',document.title||location.hostname);location.href=M+'/cnl?'+p.toString()})()`;
+  const code = `(function(){var M=${JSON.stringify(location.origin)};var F=[].slice.call(document.querySelectorAll('form')).filter(function(f){return /9666|flash\\/add/.test(f.action||'')});var p=new URLSearchParams();if(F.length){['crypted','jk','urls','passwords','source','package'].forEach(function(n){var e=F[0].querySelector('[name="'+n+'"]');if(e&&e.value)p.set(n,e.value)})}if(!p.has('crypted')&&!p.has('urls')){var a=[],s=[];[].slice.call(document.querySelectorAll('*')).forEach(function(e){for(var i=0;i<e.attributes.length;i++){var x=e.attributes[i];if(/^on|^data-|^value$|^href$/.test(x.name))a.push(x.value)}if(e.tagName=='SCRIPT')s.push(e.textContent)});var t=a.concat(s).join(' '),k={},c={};(t.match(/\\b[0-9a-fA-F]{32}\\b/g)||[]).forEach(function(x){k[x]=1});(t.match(/[A-Za-z0-9+\\/]{24,}={0,2}/g)||[]).forEach(function(x){if(x.length%4==0&&!/^[0-9a-fA-F]+$/.test(x))c[x]=1});k=Object.keys(k).slice(0,40);c=Object.keys(c).slice(0,80);if(k.length&&c.length){p.set('keys',k.join(','));p.set('crypts',c.join(','))}else{var l=[].slice.call(document.querySelectorAll('a[href^="http"]')).map(function(a){return a.href});p.set('urls',[location.href].concat(l).join(' '));p.set('nocnl','1')}}p.set('from',document.title||location.hostname);location.href=M+'/cnl?'+p.toString()})()`;
   return "javascript:" + code;
 }
 $("#cnlcopy").onclick = async () => {
@@ -820,7 +820,7 @@ async function handleCnl() {
     return toast("Kein Click'n'Load gefunden – alle Links der Seite eingefügt, bitte prüfen", true);
   }
   try {
-    const r = await api("/api/cnl/decode", {method: "POST", body: {crypted: q.get("crypted") || "", jk: q.get("jk") || "", urls: q.get("urls") || ""}});
+    const r = await api("/api/cnl/decode", {method: "POST", body: {crypted: q.get("crypted") || "", jk: q.get("jk") || "", urls: q.get("urls") || "", keys: q.get("keys") || "", crypts: q.get("crypts") || ""}});
     $("#lk_pkg").value = q.get("package") || q.get("from") || "";
     openLinks(r.urls.join("\n"));
     toast(`Click'n'Load: ${r.urls.length} ${r.urls.length === 1 ? "Link" : "Links"} gefunden`);
