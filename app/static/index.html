@@ -434,10 +434,23 @@ $("#authform").onsubmit = async e => {
 };
 function renderMe() {
   $("#me").innerHTML = me ? `<span>👤 <b>${esc(me.name)}</b>${me.role === "admin" ? ' <span class="badge">Admin</span>' : ""}</span>
+    <button class="btn ghost small" id="hookbtn" type="button" title="Benachrichtigung in deinem Home Assistant">🔔</button>
     <button class="btn ghost small" id="pwbtn" type="button">Passwort</button><button class="btn ghost small" id="logout" type="button">Abmelden</button>` : "";
   $("#tabSettings").hidden = !me || me.role !== "admin";
   if (!me) return;
   $("#logout").onclick = async () => { await api("/api/auth/logout", {method: "POST"}); location.reload(); };
+  $("#hookbtn").onclick = async () => {
+    const url = prompt("Benachrichtigung in deinem Home Assistant:\nWebhook-Adresse aus der Mediasort-Vorlage einfügen (leer lassen = aus).", me.webhook_url || "");
+    if (url === null) return;
+    try {
+      const r = await api("/api/me/webhook", {method: "POST", body: {url}});
+      me.webhook_url = r.webhook_url;
+      if (!r.webhook_url) return toast("Benachrichtigung ausgeschaltet");
+      if (confirm("Gespeichert. Jetzt eine Test-Benachrichtigung schicken?")) {
+        await api("/api/me/webhook/test", {method: "POST"}); toast("Test gesendet, schau auf dein Handy");
+      } else toast("Gespeichert");
+    } catch (e) { toast(e.message, true); }
+  };
   $("#pwbtn").onclick = async () => {
     const old = prompt("Aktuelles Passwort:"); if (old === null) return;
     const neu = prompt("Neues Passwort (min. 6 Zeichen):"); if (neu === null) return;

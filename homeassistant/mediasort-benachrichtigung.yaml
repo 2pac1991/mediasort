@@ -1,0 +1,64 @@
+blueprint:
+  name: Mediasort – Neu in der Mediathek
+  description: >
+    Schickt eine Benachrichtigung aufs Handy, sobald Mediasort einen Film, eine
+    Serie oder einen Anime einsortiert hat (mit Titel, Folge und Poster).
+
+
+    **Einrichtung:** Nach dem Speichern die Webhook-Adresse zusammensetzen:
+    `https://DEINE-HOME-ASSISTANT-ADRESSE/api/webhook/WEBHOOK-ID`
+    (bei Home Assistant Cloud: Einstellungen → Home Assistant Cloud → Webhooks).
+    Diese Adresse in Mediasort beim eigenen Namen unter 🔔 eintragen.
+  domain: automation
+  source_url: https://github.com/2pac1991/mediasort/blob/main/homeassistant/mediasort-benachrichtigung.yaml
+  input:
+    webhook_id:
+      name: Webhook-ID
+      description: >
+        Ein langer, zufälliger Name, den niemand erraten kann (z. B. mediasort-x7k2p9q4m1).
+        Er ist Teil der Adresse, die du in Mediasort einträgst.
+      selector:
+        text: {}
+    notify_device:
+      name: Handy
+      description: Das Gerät mit der Home-Assistant-App, das benachrichtigt werden soll.
+      selector:
+        device:
+          filter:
+            - integration: mobile_app
+    open_url:
+      name: Mediasort-Adresse (optional)
+      description: Wird beim Antippen der Benachrichtigung geöffnet, z. B. https://mediasort.tail780db.ts.net/
+      default: ""
+      selector:
+        text:
+          type: url
+
+mode: queued
+max: 10
+
+triggers:
+  - trigger: webhook
+    webhook_id: !input webhook_id
+    allowed_methods:
+      - POST
+    # Mediasort läuft bei einem Freund, also nicht im eigenen Heimnetz
+    local_only: false
+
+variables:
+  open_url: !input open_url
+  anzahl: "{{ trigger.json.count | default(0) | int(0) }}"
+  eintraege: "{{ trigger.json['items'] | default([]) }}"
+  poster: "{{ (eintraege | selectattr('poster') | map(attribute='poster') | first) | default('', true) }}"
+
+actions:
+  - domain: mobile_app
+    type: notify
+    device_id: !input notify_device
+    title: "{{ '🎬 Neu in der Mediathek' if anzahl == 1 else '🎬 ' ~ anzahl ~ ' neue Titel in der Mediathek' }}"
+    message: "{{ trigger.json.text | default(trigger.json.files | default([]) | join('\n'), true) }}"
+    data:
+      image: "{{ poster }}"
+      url: "{{ open_url }}"
+      clickAction: "{{ open_url }}"
+      group: mediasort

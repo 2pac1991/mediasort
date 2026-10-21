@@ -8,7 +8,7 @@ import time
 import urllib.parse
 import urllib.request
 
-from . import config, db, files, matcher, parser, renamer, tmdb
+from . import config, db, files, matcher, parser, renamer, tmdb, users
 
 log = logging.getLogger("mediasort")
 scan_lock = threading.Lock()
@@ -177,21 +177,38 @@ def notify(results):
             urllib.request.urlopen(urllib.request.Request(url), timeout=10).close()
         except Exception as e:  # noqa: BLE001
             log.warning("Plex-Refresh fehlgeschlagen: %s", e)
-    if s.get("webhook_url"):
+    # Webhook aus den Einstellungen plus die eigenen Webhooks der Nutzer (z. B. ihr Home Assistant)
+    urls = list(dict.fromkeys([u for u in [s.get("webhook_url")] + users.all_webhooks() if u]))
+    if urls:
+        entries = [webhook_entry(r) for r in results]
+        send_webhooks(urls, {
+            "count": len(results),
+            "files": [os.path.basename(r["target"] or "") for r in results],
+            "items": entries,
+            "text": "\n".join(e["text"] for e in entries),
+        })
+
+
+def send_webhooks(urls, payload, wait=False):
+    """Schickt die Meldung an alle Adressen parallel, damit ein langsamer Empfänger das Einsortieren nicht bremst."""
+    body = json.dumps(payload, ensure_ascii=False).encode()
+    errors = {}
+
+    def post(url):
         try:
-            entries = [webhook_entry(r) for r in results]
-            body = json.dumps({
-                "count": len(results),
-                "files": [os.path.basename(r["target"] or "") for r in results],
-                "items": entries,
-                "text": "\n".join(e["text"] for e in entries),
-            }, ensure_ascii=False).encode()
-            req = urllib.request.Request(
-                s["webhook_url"], data=body, headers={"Content-Type": "application/json"}, method="POST"
-            )
+            req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
             urllib.request.urlopen(req, timeout=10).close()
         except Exception as e:  # noqa: BLE001
-            log.warning("Webhook fehlgeschlagen: %s", e)
+            errors[url] = str(e)
+            log.warning("Webhook %s fehlgeschlagen: %s", url.split("/api/webhook/")[0], e)
+
+    threads = [threading.Thread(target=post, args=(u,), daemon=True) for u in urls]
+    for t in threads:
+        t.start()
+    if wait:
+        for t in threads:
+            t.join(15)
+    return errors
 
 
 def watch_loop(stop_event):

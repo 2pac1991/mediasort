@@ -172,3 +172,28 @@ def check_token(token):
             return public(name, u)
     except Exception:  # noqa: BLE001
         return None
+
+
+def set_webhook(name, url):
+    url = (url or "").strip()
+    if url and not (url.startswith("http://") or url.startswith("https://")):
+        raise ValueError("Die Adresse muss mit http:// oder https:// beginnen")
+    with _lock:
+        users = _load()
+        if name not in users:
+            raise KeyError(name)
+        if url:
+            users[name]["webhook_url"] = url
+        else:
+            users[name].pop("webhook_url", None)
+        _save()
+
+
+def get_webhook(name):
+    with _lock:
+        return (_load().get(name) or {}).get("webhook_url", "")
+
+
+def all_webhooks():
+    with _lock:
+        return [u["webhook_url"] for u in _load().values() if u.get("webhook_url")]

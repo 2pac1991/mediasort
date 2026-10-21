@@ -112,7 +112,8 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/health":
                 return self._send(200, {"ok": True})
             if u.path == "/api/auth/me":
-                return self._send(200, {"user": self.me, "setup": not users.has_users()})
+                me = dict(self.me, webhook_url=users.get_webhook(self.me["name"])) if self.me else None
+                return self._send(200, {"user": me, "setup": not users.has_users()})
             if u.path == "/api/users":
                 self._need(admin=True)
                 return self._send(200, users.list_users())
@@ -186,6 +187,22 @@ class Handler(BaseHTTPRequestHandler):
                     raise PermissionError("Altes Passwort stimmt nicht")
                 me = users.save_user(self.me["name"], body.get("password"), self.me["role"], self.me["can_delete"])
                 return self._send(200, {"user": me}, cookie=users.make_token(me["name"]))
+            # ---------- Eigene Benachrichtigung ----------
+            if u.path == "/api/me/webhook":
+                users.set_webhook(self.me["name"], body.get("url"))
+                return self._send(200, {"ok": True, "webhook_url": users.get_webhook(self.me["name"])})
+            if u.path == "/api/me/webhook/test":
+                url = users.get_webhook(self.me["name"])
+                if not url:
+                    raise ValueError("Keine Webhook-Adresse hinterlegt")
+                text = "Dark (2017) – S01E03 Vergangenheit und Gegenwart (Test von Mediasort)"
+                errors = service.send_webhooks([url], {"count": 1, "files": ["Dark (2017) - s01e03.mkv"], "text": text, "items": [{
+                    "kind": "series", "title": "Dark", "year": 2017, "season": 1, "episode": 3,
+                    "eptitle": "Vergangenheit und Gegenwart", "file": "Dark (2017) - s01e03.mkv", "text": text,
+                    "poster": "https://image.tmdb.org/t/p/w500/apbrbWs8M9lyOpJYU5WXrpFbk1Z.jpg"}]}, wait=True)
+                if errors:
+                    raise ValueError("Nicht erreichbar: " + next(iter(errors.values())))
+                return self._send(200, {"ok": True})
             # ---------- Nutzerverwaltung (Admin) ----------
             if u.path == "/api/users":
                 self._need(admin=True)
