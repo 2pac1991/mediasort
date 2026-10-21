@@ -813,6 +813,11 @@ $("#clearcache").onclick = async () => { await api("/api/cache/clear", {method: 
 
 /* Links an JDownloader */
 const linkRe = /https?:\/\/[^\s<>"'`]+/gi;
+// Linkschutz-Seiten: JDownloader kann deren Captchas oft nicht lösen, dafür ist Click'n'Load da
+const PROTECTORS = /(^|\.)(filecrypt\.(cc|co|to)|linkcrypt\.ws|keeplinks\.(org|co)|safelinking\.net|ncrypt\.in|share-links\.biz|hide\.cx|links\.snahp\.it|relink\.(us|to)|dir\.cr|protect-links\.net|linksafe\.cc)$/i;
+function protectorLinks(text) {
+  return [...new Set(text.match(linkRe) || [])].filter(u => { try { return PROTECTORS.test(new URL(u).hostname); } catch (e) { return false; } });
+}
 function openLinks(prefill) {
   if (prefill) $("#lk_text").value = prefill;
   $("#lk_android").hidden = !/Android/.test(navigator.userAgent);
@@ -824,7 +829,9 @@ function openLinks(prefill) {
 }
 function countLinks() {
   const n = new Set($("#lk_text").value.match(linkRe) || []).size;
-  $("#lk_count").textContent = n ? `${n} ${n === 1 ? "Link" : "Links"} erkannt` : "";
+  const prot = protectorLinks($("#lk_text").value);
+  $("#lk_count").innerHTML = (n ? `${n} ${n === 1 ? "Link" : "Links"} erkannt` : "") + (prot.length
+    ? `<br><span style="color:var(--bad)">⚠️ ${prot.length === 1 ? "Ein Link führt" : prot.length + " Links führen"} zu einer Schutzseite. JDownloader kann deren Captcha meist nicht lösen. Besser: Seite im Browser öffnen, Captcha lösen und dann das Lesezeichen „Mediasort CNL“ antippen.</span>` : "");
 }
 let jdLive = false;
 async function loadLinkHist() {
@@ -840,7 +847,7 @@ async function loadLinkHist() {
 }
 // Lesezeichen (Bookmarklet): liest auf einer Download-Seite die Click'n'Load-Felder aus und öffnet damit Mediasort
 function cnlBookmarklet() {
-  const code = `(function(){var M=${JSON.stringify(location.origin)};var F=[].slice.call(document.querySelectorAll('form')).filter(function(f){return /9666|flash\\/add/.test(f.action||'')});var p=new URLSearchParams();if(F.length){['crypted','jk','urls','passwords','source','package'].forEach(function(n){var e=F[0].querySelector('[name="'+n+'"]');if(e&&e.value)p.set(n,e.value)})}if(!p.has('crypted')&&!p.has('urls')){var a=[],s=[];[].slice.call(document.querySelectorAll('*')).forEach(function(e){for(var i=0;i<e.attributes.length;i++){var x=e.attributes[i];if(/^on|^data-|^value$|^href$/.test(x.name))a.push(x.value)}if(e.tagName=='SCRIPT')s.push(e.textContent)});var t=a.concat(s).join(' '),k={},c={};(t.match(/\\b[0-9a-fA-F]{32}\\b/g)||[]).forEach(function(x){k[x]=1});(t.match(/[A-Za-z0-9+\\/]{24,}={0,2}/g)||[]).forEach(function(x){if(x.length%4==0&&!/^[0-9a-fA-F]+$/.test(x))c[x]=1});k=Object.keys(k).slice(0,40);c=Object.keys(c).slice(0,80);if(k.length&&c.length){p.set('keys',k.join(','));p.set('crypts',c.join(','))}else{var l=[].slice.call(document.querySelectorAll('a[href^="http"]')).map(function(a){return a.href});p.set('urls',[location.href].concat(l).join(' '));p.set('nocnl','1')}}p.set('from',document.title||location.hostname);location.href=M+'/cnl?'+p.toString()})()`;
+  const code = `(function(){var M=${JSON.stringify(location.origin)};var F=[].slice.call(document.querySelectorAll('form')).filter(function(f){return /9666|flash\\/add/.test(f.action||'')});var p=new URLSearchParams();if(F.length){['crypted','jk','urls','passwords','source','package'].forEach(function(n){var e=F[0].querySelector('[name="'+n+'"]');if(e&&e.value)p.set(n,e.value)})}if(!p.has('crypted')&&!p.has('urls')){var a=[],s=[];[].slice.call(document.querySelectorAll('*')).forEach(function(e){for(var i=0;i<e.attributes.length;i++){var x=e.attributes[i];if(/^on|^data-|^value$|^href$/.test(x.name))a.push(x.value)}if(e.tagName=='SCRIPT')s.push(e.textContent)});var t=a.concat(s).join(' '),k={},c={};(t.match(/\\b[0-9a-fA-F]{32}\\b/g)||[]).forEach(function(x){k[x]=1});(t.match(/[A-Za-z0-9+\\/]{24,}={0,2}/g)||[]).forEach(function(x){if(x.length%4==0&&!/^[0-9a-fA-F]+$/.test(x))c[x]=1});k=Object.keys(k).slice(0,40);c=Object.keys(c).slice(0,80);if(k.length&&c.length){p.set('keys',k.join(','));p.set('crypts',c.join(','))}else{var l=[].slice.call(document.querySelectorAll('a[href^="http"]')).map(function(a){return a.href});p.set('urls',l.join(' '));p.set('nocnl','1')}}p.set('from',document.title||location.hostname);location.href=M+'/cnl?'+p.toString()})()`;
   return "javascript:" + code;
 }
 $("#cnlcopy").onclick = async () => {
@@ -867,6 +874,7 @@ async function handleCnl() {
 $("#linksbtn").onclick = () => openLinks();
 $("#lk_text").oninput = countLinks;
 $("#lk_send").onclick = async () => {
+  if (protectorLinks($("#lk_text").value).length && !confirm("Darunter sind Links zu Schutzseiten (z. B. filecrypt). Die bleiben im JDownloader meist mit „Captcha unsupported“ hängen. Trotzdem senden?")) return;
   const b = $("#lk_send"); b.disabled = true;
   try {
     const r = await api("/api/links", {method: "POST", body: {text: $("#lk_text").value, package: $("#lk_pkg").value}});
