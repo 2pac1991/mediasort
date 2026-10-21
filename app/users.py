@@ -72,7 +72,9 @@ def _check_password(password):
 
 
 def public(name, u):
-    return {"name": name, "role": u["role"], "can_delete": u["role"] == "admin" or bool(u.get("can_delete"))}
+    admin = u["role"] == "admin"
+    return {"name": name, "role": u["role"], "can_delete": admin or bool(u.get("can_delete")),
+            "can_links": admin or bool(u.get("can_links"))}
 
 
 def has_users():
@@ -91,7 +93,7 @@ def get(name):
         return public(name, u) if u else None
 
 
-def save_user(name, password=None, role="user", can_delete=False, create=False):
+def save_user(name, password=None, role="user", can_delete=False, create=False, can_links=None):
     name = _clean_name(name)
     if role not in ROLES:
         raise ValueError("Ungültige Rolle")
@@ -109,6 +111,8 @@ def save_user(name, password=None, role="user", can_delete=False, create=False):
         if u.get("role") == "admin" and role != "admin" and _admin_count(users) <= 1:
             raise ValueError("Der letzte Admin kann nicht herabgestuft werden")
         u["role"], u["can_delete"] = role, bool(can_delete)
+        if can_links is not None:
+            u["can_links"] = bool(can_links)
         users[name] = u
         _save()
         return public(name, u)

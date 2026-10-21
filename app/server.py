@@ -8,7 +8,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import config, db, files, renamer, service, tmdb, users
+from . import config, db, files, links, renamer, service, tmdb, users
 
 VERSION = "1.1.0"
 STATIC = os.path.join(os.path.dirname(__file__), "static")
@@ -25,7 +25,7 @@ STATIC_FILES = {
     "/sw.js": "text/javascript; charset=utf-8", "/offline.html": "text/html; charset=utf-8",
 }
 # Ohne Anmeldung erreichbar
-PUBLIC = {"/", "/index.html", "/api/health", "/api/auth/me", "/api/auth/login", "/api/auth/setup",
+PUBLIC = {"/", "/index.html", "/share", "/api/health", "/api/auth/me", "/api/auth/login", "/api/auth/setup",
           "/api/auth/logout", *STATIC_FILES}
 
 
@@ -90,11 +90,13 @@ class Handler(BaseHTTPRequestHandler):
         self._send(401, {"error": "Bitte anmelden", "setup": not users.has_users()})
         return False
 
-    def _need(self, admin=False, delete=False):
+    def _need(self, admin=False, delete=False, add_links=False):
         if admin and self.me["role"] != "admin":
             raise PermissionError("Nur für Admins")
         if delete and not self.me["can_delete"]:
             raise PermissionError("Du darfst nichts löschen")
+        if add_links and not self.me["can_links"]:
+            raise PermissionError("Du darfst keine Links senden")
 
     # ---------- Routing ----------
     def do_GET(self):
@@ -103,7 +105,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         try:
-            if u.path in ("/", "/index.html"):
+            if u.path in ("/", "/index.html", "/share"):
                 with open(os.path.join(STATIC, "index.html"), "rb") as f:
                     return self._send(200, f.read(), "text/html; charset=utf-8")
             if u.path in STATIC_FILES:
@@ -121,6 +123,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, [{"key": k, "name": n} for k, (n, _) in files.roots().items()])
             if u.path == "/api/files":
                 return self._send(200, files.list_dir(q.get("root", ""), q.get("path", "")))
+            if u.path == "/api/links":
+                self._need(add_links=True)
+                return self._send(200, {"items": db.list_links(), "configured": bool(config.get().get("jd_watch_dir"))})
             if u.path == "/api/trash":
                 return self._send(200, {"items": files.list_trash(), "days": config.get().get("trash_days")})
             if u.path == "/api/status":
@@ -208,13 +213,19 @@ class Handler(BaseHTTPRequestHandler):
                 self._need(admin=True)
                 return self._send(200, users.save_user(
                     body.get("name"), body.get("password") or None, body.get("role", "user"),
-                    body.get("can_delete", False), create=bool(body.get("create"))))
+                    body.get("can_delete", False), create=bool(body.get("create")), can_links=body.get("can_links")))
             if u.path == "/api/users/delete":
                 self._need(admin=True)
                 if body.get("name") == self.me["name"]:
                     raise ValueError("Du kannst dich nicht selbst löschen")
                 users.delete_user(body.get("name"))
                 return self._send(200, {"ok": True})
+            # ---------- Links an JDownloader ----------
+            if u.path == "/api/links":
+                self._need(add_links=True)
+                n = links.send(body.get("text"), body.get("package"), self.me["name"])
+                log.info("%s hat %d Link(s) an JDownloader geschickt", self.me["name"], n)
+                return self._send(200, {"ok": True, "count": n})
             # ---------- Dateien ----------
             if u.path == "/api/files/delete":
                 self._need(delete=True)

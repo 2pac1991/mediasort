@@ -222,6 +222,7 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
     <div class="tools">
       <button class="btn primary" id="scan">Downloads scannen</button>
       <button class="btn ghost" id="rescan" title="Alle offenen Dateien neu bei TMDB abfragen">Neu erkennen</button>
+      <button class="btn" id="linksbtn" type="button" hidden>＋ Links senden</button>
       <span class="grow"></span>
       <div class="filters" id="filters"></div>
     </div>
@@ -318,6 +319,13 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
         <label class="f" for="webhook_url">Webhook-URL</label><input type="text" id="webhook_url" name="webhook_url" placeholder="http://homeassistant:8123/api/webhook/mediasort">
       </div>
       <div class="card">
+        <h2>JDownloader</h2>
+        <p class="hint">Damit Nutzer Links senden können: In JDownloader unter <i>Einstellungen → Erweiterungen</i> <b>Folder Watch</b> aktivieren und in den erweiterten Einstellungen bei <i>FolderWatch: Folders</i> den Ordner eintragen, wie ihn JDownloader sieht (z. B. <code>/output/.mediasort-links</code>). Hier denselben Ordner so eintragen, wie ihn Mediasort sieht.</p>
+        <label class="f" for="jd_watch_dir">Überwachter Ordner (Pfad in Mediasort)</label>
+        <input type="text" id="jd_watch_dir" name="jd_watch_dir" placeholder="/data/Downloads/.mediasort-links">
+      </div>
+
+      <div class="card">
         <h2>Papierkorb</h2>
         <p class="hint">Gelöschte Dateien landen erst im Papierkorb und können wiederhergestellt werden.</p>
         <label class="f" for="trash_days">Endgültig löschen nach (Tagen)</label>
@@ -332,6 +340,7 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
           <input type="text" id="nu_name" placeholder="Name" style="flex:1;min-width:120px" autocomplete="off">
           <input type="password" id="nu_pw" placeholder="Passwort (min. 6 Zeichen)" style="flex:1;min-width:160px" autocomplete="new-password">
           <label class="switch" style="margin:0"><input type="checkbox" id="nu_del"> Darf löschen</label>
+          <label class="switch" style="margin:0"><input type="checkbox" id="nu_lnk"> Darf Links senden</label>
           <button class="btn" type="button" id="nu_add">Nutzer anlegen</button>
         </div>
       </div>
@@ -421,6 +430,25 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
       <button class="btn ghost" type="button" id="hookclose">Schließen</button>
     </div>
     <div class="hint" id="hookstate" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<div class="scrim" id="linkscrim" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="linkstitle">
+    <h2 id="linkstitle">Links an JDownloader senden</h2>
+    <p class="hint" style="color:var(--muted);margin:0">Links einfügen, auch ganze Nachrichten. Mediasort sucht die Links heraus, JDownloader lädt sie in den Download-Ordner, danach wird automatisch einsortiert.</p>
+    <p class="hint" id="lk_android" style="color:var(--muted);margin:8px 0 0" hidden>Tipp: Auf Android kannst du Links auch direkt über <b>Teilen → Mediasort</b> schicken.</p>
+    <label class="f" for="lk_text">Links</label>
+    <textarea id="lk_text" rows="6" placeholder="https://…"></textarea>
+    <div class="hint" id="lk_count" style="color:var(--muted);font-size:13px;margin-top:4px"></div>
+    <label class="f" for="lk_pkg">Paketname (optional)</label>
+    <input type="text" id="lk_pkg" placeholder="z. B. Filmtitel" autocomplete="off">
+    <div class="actions">
+      <button class="btn primary" type="button" id="lk_send">An JDownloader senden</button>
+      <button class="btn ghost" type="button" id="lk_close">Schließen</button>
+    </div>
+    <h3 style="font-weight:600;font-size:15px;margin:26px 0 8px">Zuletzt gesendet</h3>
+    <div id="lk_hist" class="ulist"></div>
   </div>
 </div>
 
@@ -715,6 +743,42 @@ $("#testtmdb").onclick = async () => {
 };
 $("#clearcache").onclick = async () => { await api("/api/cache/clear", {method: "POST"}); toast("Cache geleert"); };
 
+/* Links an JDownloader */
+const linkRe = /https?:\/\/[^\s<>"'`]+/gi;
+function openLinks(prefill) {
+  if (prefill) $("#lk_text").value = prefill;
+  $("#lk_android").hidden = !/Android/.test(navigator.userAgent);
+  countLinks(); loadLinkHist();
+  $("#linkscrim").hidden = false; $("#lk_text").focus();
+}
+function countLinks() {
+  const n = new Set($("#lk_text").value.match(linkRe) || []).size;
+  $("#lk_count").textContent = n ? `${n} ${n === 1 ? "Link" : "Links"} erkannt` : "";
+}
+async function loadLinkHist() {
+  try {
+    const r = await api("/api/links");
+    $("#lk_hist").innerHTML = r.items.length ? r.items.map(l => `<div class="urow" style="display:block">
+        <b>${esc(l.package || (l.urls[0] || "").replace(/^https?:\/\//, "").slice(0, 60))}</b>
+        <div class="hint" style="color:var(--muted);font-size:12px;margin-top:2px">${l.count} ${l.count === 1 ? "Link" : "Links"} · ${esc(l.user)} · ${fmtDate(l.ts)}</div></div>`).join("")
+      : `<p class="hint" style="color:var(--muted)">Noch nichts gesendet.</p>`;
+    if (!r.configured) $("#lk_hist").insertAdjacentHTML("afterbegin", `<p class="hint" style="color:var(--bad)">JDownloader ist noch nicht eingerichtet. Ein Admin muss das in den Einstellungen erledigen.</p>`);
+  } catch (e) { $("#lk_hist").innerHTML = `<p class="hint" style="color:var(--bad)">${esc(e.message)}</p>`; }
+}
+$("#linksbtn").onclick = () => openLinks();
+$("#lk_text").oninput = countLinks;
+$("#lk_send").onclick = async () => {
+  const b = $("#lk_send"); b.disabled = true;
+  try {
+    const r = await api("/api/links", {method: "POST", body: {text: $("#lk_text").value, package: $("#lk_pkg").value}});
+    toast(`${r.count} ${r.count === 1 ? "Link" : "Links"} an JDownloader gesendet`);
+    $("#lk_text").value = ""; $("#lk_pkg").value = ""; countLinks(); loadLinkHist();
+  } catch (e) { toast(e.message, true); }
+  b.disabled = false;
+};
+$("#lk_close").onclick = () => $("#linkscrim").hidden = true;
+$("#linkscrim").onclick = e => { if (e.target === $("#linkscrim")) $("#linkscrim").hidden = true; };
+
 /* Benachrichtigung */
 const BLUEPRINT = "https://github.com/2pac1991/mediasort/blob/main/homeassistant/mediasort-benachrichtigung.yaml";
 function hookParts(url) {
@@ -884,16 +948,17 @@ async function loadUsers() {
       <b>${esc(u.name)}${u.name === me.name ? " (du)" : ""}</b>
       <select data-f="role" aria-label="Rolle"><option value="user" ${u.role === "user" ? "selected" : ""}>Nutzer</option><option value="admin" ${u.role === "admin" ? "selected" : ""}>Admin</option></select>
       <label><input type="checkbox" data-f="del" ${u.can_delete ? "checked" : ""} ${u.role === "admin" ? "disabled" : ""}> Darf löschen</label>
+      <label><input type="checkbox" data-f="lnk" ${u.can_links ? "checked" : ""} ${u.role === "admin" ? "disabled" : ""}> Darf Links senden</label>
       <button class="btn small" type="button" data-f="pw">Passwort setzen</button>
       ${u.name === me.name ? "" : `<button class="btn small danger" type="button" data-f="rm">Entfernen</button>`}
     </div>`).join("");
   $("#ulist").querySelectorAll(".urow").forEach(row => {
-    const name = row.dataset.n, role = row.querySelector("[data-f=role]"), del = row.querySelector("[data-f=del]");
+    const name = row.dataset.n, role = row.querySelector("[data-f=role]"), del = row.querySelector("[data-f=del]"), lnk = row.querySelector("[data-f=lnk]");
     const save = async (password) => {
-      try { await api("/api/users", {method: "POST", body: {name, role: role.value, can_delete: del.checked, password}}); toast("Gespeichert"); loadUsers(); }
+      try { await api("/api/users", {method: "POST", body: {name, role: role.value, can_delete: del.checked, can_links: lnk.checked, password}}); toast("Gespeichert"); loadUsers(); }
       catch (e) { toast(e.message, true); loadUsers(); }
     };
-    role.onchange = () => save(); del.onchange = () => save();
+    role.onchange = () => save(); del.onchange = () => save(); lnk.onchange = () => save();
     row.querySelector("[data-f=pw]").onclick = () => { const pw = prompt(`Neues Passwort für ${name} (min. 6 Zeichen):`); if (pw) save(pw); };
     const rm = row.querySelector("[data-f=rm]");
     if (rm) rm.onclick = async () => {
@@ -904,8 +969,8 @@ async function loadUsers() {
 }
 $("#nu_add").onclick = async () => {
   try {
-    await api("/api/users", {method: "POST", body: {name: $("#nu_name").value, password: $("#nu_pw").value, can_delete: $("#nu_del").checked, role: "user", create: true}});
-    $("#nu_name").value = ""; $("#nu_pw").value = ""; $("#nu_del").checked = false; toast("Nutzer angelegt"); loadUsers();
+    await api("/api/users", {method: "POST", body: {name: $("#nu_name").value, password: $("#nu_pw").value, can_delete: $("#nu_del").checked, can_links: $("#nu_lnk").checked, role: "user", create: true}});
+    $("#nu_name").value = ""; $("#nu_pw").value = ""; $("#nu_del").checked = false; $("#nu_lnk").checked = false; toast("Nutzer angelegt"); loadUsers();
   } catch (e) { toast(e.message, true); }
 };
 
@@ -926,6 +991,14 @@ if ("serviceWorker" in navigator && (location.protocol === "https:" || location.
 let started = false;
 async function start(user) {
   me = user; renderMe();
+  $("#linksbtn").hidden = !me.can_links;
+  // Über "Teilen → Mediasort" (Android) geöffnet: Links direkt ins Fenster übernehmen
+  if (location.pathname === "/share") {
+    const q = new URLSearchParams(location.search);
+    const shared = [q.get("title"), q.get("text"), q.get("url")].filter(Boolean).join("\n");
+    history.replaceState(null, "", "/");
+    if (me.can_links) openLinks(shared); else toast("Du darfst keine Links senden", true);
+  }
   if (me.role !== "admin" && !$("#tab-settings").hidden) document.querySelector('nav button[data-tab="inbox"]').click();
   await loadSettings(); await loadItems(); status();
   if (started) return;

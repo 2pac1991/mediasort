@@ -51,6 +51,14 @@ def init(path):
                 is_dir INTEGER,
                 size INTEGER
             );
+            CREATE TABLE IF NOT EXISTS links (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts REAL,
+                user TEXT,
+                package TEXT,
+                count INTEGER,
+                urls TEXT
+            );
             CREATE TABLE IF NOT EXISTS cache (
                 key TEXT PRIMARY KEY,
                 value TEXT,
@@ -223,3 +231,24 @@ def delete_trash(tid):
     with _lock:
         _conn.execute("DELETE FROM trash WHERE id=?", (tid,))
         _conn.commit()
+
+
+def add_links(user, package, urls):
+    with _lock:
+        cur = _conn.execute(
+            "INSERT INTO links (ts, user, package, count, urls) VALUES (?,?,?,?,?)",
+            (time.time(), user, package, len(urls), json.dumps(urls)),
+        )
+        _conn.commit()
+        return cur.lastrowid
+
+
+def list_links(limit=30):
+    with _lock:
+        rows = _conn.execute("SELECT * FROM links ORDER BY ts DESC LIMIT ?", (limit,)).fetchall()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["urls"] = json.loads(d["urls"] or "[]")
+        out.append(d)
+    return out

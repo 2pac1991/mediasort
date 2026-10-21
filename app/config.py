@@ -34,6 +34,8 @@ DEFAULTS = {
     # Papierkorb für gelöschte Dateien (muss auf demselben Mount wie die Mediathek liegen)
     "trash_dir": "/data/.mediasort-papierkorb",
     "trash_days": 14,
+    # Ordner, den JDownloader mit der Erweiterung "Folder Watch" überwacht (Auftragsdateien .crawljob)
+    "jd_watch_dir": "",
 }
 
 _lock = threading.Lock()

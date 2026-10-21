@@ -58,3 +58,13 @@ Jeder Nutzer kann sich in seinem eigenen Home Assistant benachrichtigen lassen, 
 4. In Mediasort beim eigenen Namen auf **🔔** tippen, die Adresse einfügen und den Test senden.
 
 Mediasort braucht dafür Zugang zum Internet bzw. zur Home-Assistant-Adresse des Freundes.
+
+## Links an JDownloader senden
+
+Nutzer mit dem Recht „Darf Links senden" können im Eingang über **＋ Links senden** Links an JDownloader schicken (auf Android auch über **Teilen → Mediasort**). Mediasort legt dafür eine `.crawljob`-Datei in einen Ordner, den JDownloader überwacht.
+
+Einmalig einrichten:
+1. In JDownloader (Weboberfläche des Containers) unter **Einstellungen → Erweiterungen** die Erweiterung **Folder Watch** aktivieren.
+2. Unter **Einstellungen → Erweiterte Einstellungen** nach `FolderWatch` suchen und bei **Folders** den Ordner eintragen, z. B. `["/output/.mediasort-links"]` (so sieht ihn der JDownloader-Container).
+3. Den Ordner anlegen: `/mnt/user/Plex/Downloads/.mediasort-links`.
+4. In Mediasort unter **Einstellungen → JDownloader** denselben Ordner so eintragen, wie Mediasort ihn sieht: `/data/Downloads/.mediasort-links`.
