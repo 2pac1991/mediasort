@@ -45,10 +45,9 @@
     open.href = "intent://#Intent;package=com.tailscale.ipn;end";
     document.getElementById("tip").innerHTML = "<b>Tipp:</b> In den Android-Einstellungen unter <i>Netzwerk → VPN → Tailscale</i> „Durchgehend aktives VPN“ einschalten. Dann ist Tailscale immer verbunden.";
   } else if (ios) {
-    // Startet den Kurzbefehl "Tailscale verbinden" (einmalig in der Kurzbefehle-App anlegen)
-    open.href = "shortcuts://run-shortcut?name=" + encodeURIComponent("Tailscale verbinden");
-    open.textContent = "Tailscale verbinden";
-    document.getElementById("tip").innerHTML = "<b>Einmalig einrichten:</b> In der Kurzbefehle-App einen Kurzbefehl namens <b>Tailscale verbinden</b> anlegen, mit der Aktion <i>Tailscale → Verbinden</i>. Dann schaltet dieser Knopf das VPN direkt ein.";
+    // Tailscale hat auf iOS keine Adresse zum direkten Öffnen; im App Store steht bei installierter App "Öffnen"
+    open.href = "https://apps.apple.com/app/tailscale/id1470499037";
+    document.getElementById("tip").innerHTML = "Im App Store auf <b>Öffnen</b> tippen, in Tailscale verbinden und zurück zu Mediasort wechseln. Mediasort lädt dann von selbst.<br><br><b>Tipp:</b> In der Tailscale-App <i>VPN On Demand</i> einschalten, dann verbindet es sich automatisch.";
   } else {
     open.style.display = "none";
     document.getElementById("tip").innerHTML = "Öffne Tailscale auf diesem Gerät und klicke auf <b>Connect</b>.";
