@@ -148,6 +148,25 @@ def apply_items(ids):
     return results
 
 
+def webhook_entry(result):
+    """Lesbare Angaben zu einem einsortierten Eintrag, z. B. für eine Home-Assistant-Benachrichtigung."""
+    it = db.get_item(result["id"]) or {}
+    m = it.get("match") or {}
+    kind = "movie" if m.get("type") == "movie" else ("anime" if (it.get("parsed") or {}).get("anime") or m.get("is_anime") else "series")
+    title = m.get("title") or os.path.basename(result.get("target") or "")
+    year = m.get("year")
+    text = f"{title} ({year})" if year else title
+    if kind != "movie" and m.get("season") is not None and m.get("episode") is not None:
+        text += f" – S{m['season']:02}E{m['episode']:02}"
+        if m.get("eptitle"):
+            text += f" {m['eptitle']}"
+    return {
+        "kind": kind, "title": title, "year": year, "season": m.get("season"), "episode": m.get("episode"),
+        "eptitle": m.get("eptitle"), "poster": m.get("poster"), "file": os.path.basename(result.get("target") or ""),
+        "text": text,
+    }
+
+
 def notify(results):
     s = config.get()
     if s.get("plex_url") and s.get("plex_token"):
@@ -160,9 +179,13 @@ def notify(results):
             log.warning("Plex-Refresh fehlgeschlagen: %s", e)
     if s.get("webhook_url"):
         try:
-            body = json.dumps(
-                {"count": len(results), "files": [os.path.basename(r["target"] or "") for r in results]}
-            ).encode()
+            entries = [webhook_entry(r) for r in results]
+            body = json.dumps({
+                "count": len(results),
+                "files": [os.path.basename(r["target"] or "") for r in results],
+                "items": entries,
+                "text": "\n".join(e["text"] for e in entries),
+            }, ensure_ascii=False).encode()
             req = urllib.request.Request(
                 s["webhook_url"], data=body, headers={"Content-Type": "application/json"}, method="POST"
             )
