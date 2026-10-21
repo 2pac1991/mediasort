@@ -70,3 +70,7 @@ Alternativ ohne My.JDownloader über einen überwachten Ordner:
 2. Unter **Einstellungen → Erweiterte Einstellungen** nach `FolderWatch` suchen und bei **Folders** den Ordner eintragen, z. B. `["/output/.mediasort-links"]` (so sieht ihn der JDownloader-Container).
 3. Den Ordner anlegen: `/mnt/user/Plex/Downloads/.mediasort-links`.
 4. In Mediasort unter **Einstellungen → JDownloader** denselben Ordner so eintragen, wie Mediasort ihn sieht: `/data/Downloads/.mediasort-links`.
+
+## Click'n'Load am Handy
+
+Im Fenster **＋ Links senden** gibt es unter **Click'n'Load am Handy einrichten** ein Lesezeichen (Bookmarklet). Auf einer Seite mit Click'n'Load-Knopf das Lesezeichen antippen: Es liest die verschlüsselten CNL-Daten (`crypted`, `jk`) der Seite aus, Mediasort entschlüsselt sie und zeigt die Links zum Senden an. Das JavaScript aus `jk` wird dabei nie ausgeführt, nur der Schlüssel wird herausgelesen. Findet das Lesezeichen keinen Click'n'Load-Knopf, werden die Links der Seite zur Auswahl eingefügt.

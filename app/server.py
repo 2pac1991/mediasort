@@ -25,7 +25,7 @@ STATIC_FILES = {
     "/sw.js": "text/javascript; charset=utf-8", "/offline.html": "text/html; charset=utf-8",
 }
 # Ohne Anmeldung erreichbar
-PUBLIC = {"/", "/index.html", "/share", "/api/health", "/api/auth/me", "/api/auth/login", "/api/auth/setup",
+PUBLIC = {"/", "/index.html", "/share", "/cnl", "/api/health", "/api/auth/me", "/api/auth/login", "/api/auth/setup",
           "/api/auth/logout", *STATIC_FILES}
 
 
@@ -107,7 +107,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         try:
-            if u.path in ("/", "/index.html", "/share"):
+            if u.path in ("/", "/index.html", "/share", "/cnl"):
                 with open(os.path.join(STATIC, "index.html"), "rb") as f:
                     return self._send(200, f.read(), "text/html; charset=utf-8")
             if u.path in STATIC_FILES:
@@ -228,6 +228,9 @@ class Handler(BaseHTTPRequestHandler):
                 n = links.send(body.get("text"), body.get("package"), self.me["name"])
                 log.info("%s hat %d Link(s) an JDownloader geschickt", self.me["name"], n)
                 return self._send(200, {"ok": True, "count": n})
+            if u.path == "/api/cnl/decode":
+                self._need(add_links=True)
+                return self._send(200, {"urls": links.decode_cnl(body.get("crypted", ""), body.get("jk", ""), body.get("urls", ""))})
             # ---------- Dateien ----------
             if u.path == "/api/files/delete":
                 self._need(delete=True)

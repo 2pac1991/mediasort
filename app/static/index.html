@@ -455,6 +455,13 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
       <button class="btn primary" type="button" id="lk_send">An JDownloader senden</button>
       <button class="btn ghost" type="button" id="lk_close">Schließen</button>
     </div>
+    <details class="cnlhelp" style="margin-top:22px">
+      <summary style="cursor:pointer;font-weight:600">Click'n'Load am Handy einrichten</summary>
+      <p class="hint" style="color:var(--muted)">Einmalig ein Lesezeichen anlegen. Danach auf jeder Seite mit Click'n'Load-Knopf das Lesezeichen antippen, Mediasort öffnet sich mit den Links.</p>
+      <div class="inline"><input type="text" id="cnlcode" readonly><button class="btn small" type="button" id="cnlcopy">Code kopieren</button></div>
+      <p class="hint" style="color:var(--muted);margin-top:10px"><b>iPhone (Safari):</b> 1. Diese Seite als Lesezeichen sichern (Teilen → Lesezeichen hinzufügen), Name <b>Mediasort CNL</b>. 2. Lesezeichen öffnen → Bearbeiten → das Lesezeichen antippen und die Adresse durch den kopierten Code ersetzen. 3. Auf einer Download-Seite: Lesezeichen → <b>Mediasort CNL</b>.</p>
+      <p class="hint" style="color:var(--muted)"><b>Android (Chrome):</b> 1. Menü ⋮ → ☆ (Lesezeichen), dann Bearbeiten: Name <b>Mediasort CNL</b>, als URL den kopierten Code einfügen. 2. Auf einer Download-Seite in die Adressleiste <b>Mediasort CNL</b> tippen und den Lesezeichen-Vorschlag antippen.</p>
+    </details>
     <h3 style="font-weight:600;font-size:15px;margin:26px 0 8px">Zuletzt gesendet</h3>
     <div id="lk_hist" class="ulist"></div>
   </div>
@@ -776,6 +783,7 @@ const linkRe = /https?:\/\/[^\s<>"'`]+/gi;
 function openLinks(prefill) {
   if (prefill) $("#lk_text").value = prefill;
   $("#lk_android").hidden = !/Android/.test(navigator.userAgent);
+  $("#cnlcode").value = cnlBookmarklet();
   countLinks(); loadLinkHist();
   $("#linkscrim").hidden = false; $("#lk_text").focus();
 }
@@ -792,6 +800,31 @@ async function loadLinkHist() {
       : `<p class="hint" style="color:var(--muted)">Noch nichts gesendet.</p>`;
     if (!r.configured) $("#lk_hist").insertAdjacentHTML("afterbegin", `<p class="hint" style="color:var(--bad)">JDownloader ist noch nicht eingerichtet. Ein Admin muss das in den Einstellungen erledigen.</p>`);
   } catch (e) { $("#lk_hist").innerHTML = `<p class="hint" style="color:var(--bad)">${esc(e.message)}</p>`; }
+}
+// Lesezeichen (Bookmarklet): liest auf einer Download-Seite die Click'n'Load-Felder aus und öffnet damit Mediasort
+function cnlBookmarklet() {
+  const code = `(function(){var M=${JSON.stringify(location.origin)};var F=[].slice.call(document.querySelectorAll('form')).filter(function(f){return /9666|flash\\/add/.test(f.action||'')});var p=new URLSearchParams();if(F.length){['crypted','jk','urls','passwords','source','package'].forEach(function(n){var e=F[0].querySelector('[name="'+n+'"]');if(e&&e.value)p.set(n,e.value)})}if(!p.has('crypted')&&!p.has('urls')){var l=[].slice.call(document.querySelectorAll('a[href^="http"]')).map(function(a){return a.href});p.set('urls',[location.href].concat(l).join(' '));p.set('nocnl','1')}p.set('from',document.title||location.hostname);location.href=M+'/cnl?'+p.toString()})()`;
+  return "javascript:" + code;
+}
+$("#cnlcopy").onclick = async () => {
+  try { await navigator.clipboard.writeText($("#cnlcode").value); toast("Code kopiert"); }
+  catch (e) { $("#cnlcode").select(); toast("Markiert, bitte kopieren"); }
+};
+async function handleCnl() {
+  const q = new URLSearchParams(location.search);
+  history.replaceState(null, "", "/");
+  if (!me.can_links) return toast("Du darfst keine Links senden", true);
+  if (q.get("nocnl")) {
+    // Kein Click'n'Load-Knopf gefunden: die Links der Seite zur Auswahl anbieten
+    openLinks(q.get("urls").split(" ").join("\n"));
+    return toast("Kein Click'n'Load gefunden – alle Links der Seite eingefügt, bitte prüfen", true);
+  }
+  try {
+    const r = await api("/api/cnl/decode", {method: "POST", body: {crypted: q.get("crypted") || "", jk: q.get("jk") || "", urls: q.get("urls") || ""}});
+    $("#lk_pkg").value = q.get("package") || q.get("from") || "";
+    openLinks(r.urls.join("\n"));
+    toast(`Click'n'Load: ${r.urls.length} ${r.urls.length === 1 ? "Link" : "Links"} gefunden`);
+  } catch (e) { toast(e.message, true); }
 }
 $("#linksbtn").onclick = () => openLinks();
 $("#lk_text").oninput = countLinks;
@@ -1021,7 +1054,8 @@ async function start(user) {
   me = user; renderMe();
   $("#linksbtn").hidden = !me.can_links;
   // Über "Teilen → Mediasort" (Android) geöffnet: Links direkt ins Fenster übernehmen
-  if (location.pathname === "/share") {
+  if (location.pathname === "/cnl") handleCnl();
+  else if (location.pathname === "/share") {
     const q = new URLSearchParams(location.search);
     const shared = [q.get("title"), q.get("text"), q.get("url")].filter(Boolean).join("\n");
     history.replaceState(null, "", "/");
