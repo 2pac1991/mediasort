@@ -2,8 +2,16 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mediasort</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#122230">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mediasort">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif&display=swap" rel="stylesheet">
 <style>
@@ -22,7 +30,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 a{color:var(--amber)}
 
 /* Kopf */
-header{position:sticky;top:0;z-index:5;background:rgba(18,34,48,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header{padding-top:env(safe-area-inset-top);position:sticky;top:0;z-index:5;background:rgba(18,34,48,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .bar{max-width:1180px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
 .brand{font-family:"Instrument Serif",Georgia,serif;font-size:30px;line-height:1;letter-spacing:-.01em;display:flex;align-items:baseline;gap:10px}
 .brand small{font-family:"Instrument Sans",sans-serif;font-size:13px;color:var(--muted)}

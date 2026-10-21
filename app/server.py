@@ -17,9 +17,15 @@ SETUP_CODE = os.environ.get("UI_PASSWORD", "")
 COOKIE = "mediasort_session"
 log = logging.getLogger("mediasort")
 
+# Statische Dateien für Icon und Web-App (ohne Anmeldung, sonst kann das Handy sie nicht laden)
+STATIC_FILES = {
+    "/icon.png": "image/png", "/icon-192.png": "image/png", "/icon-512.png": "image/png",
+    "/icon-maskable-512.png": "image/png", "/apple-touch-icon.png": "image/png",
+    "/manifest.webmanifest": "application/manifest+json",
+}
 # Ohne Anmeldung erreichbar
-PUBLIC = {"/", "/index.html", "/icon.png", "/api/health", "/api/auth/me", "/api/auth/login", "/api/auth/setup",
-          "/api/auth/logout"}
+PUBLIC = {"/", "/index.html", "/api/health", "/api/auth/me", "/api/auth/login", "/api/auth/setup",
+          "/api/auth/logout", *STATIC_FILES}
 
 
 def retarget_open_items():
@@ -99,9 +105,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path in ("/", "/index.html"):
                 with open(os.path.join(STATIC, "index.html"), "rb") as f:
                     return self._send(200, f.read(), "text/html; charset=utf-8")
-            if u.path == "/icon.png":
-                with open(os.path.join(STATIC, "icon.png"), "rb") as f:
-                    return self._send(200, f.read(), "image/png")
+            if u.path in STATIC_FILES:
+                with open(os.path.join(STATIC, u.path.lstrip("/")), "rb") as f:
+                    return self._send(200, f.read(), STATIC_FILES[u.path])
             if u.path == "/api/health":
                 return self._send(200, {"ok": True})
             if u.path == "/api/auth/me":
