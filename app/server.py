@@ -234,7 +234,7 @@ class Handler(BaseHTTPRequestHandler):
                     found = links.decode_candidates(body["keys"].split(","), body["crypts"].split(","))
                 else:
                     found = links.decode_cnl(body.get("crypted", ""), body.get("jk", ""), body.get("urls", ""))
-                return self._send(200, {"urls": found})
+                return self._send(200, {"urls": found, "package": body.get("package") or links.guess_package(found)})
             # ---------- Dateien ----------
             if u.path == "/api/files/delete":
                 self._need(delete=True)

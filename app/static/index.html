@@ -450,7 +450,7 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
     <textarea id="lk_text" rows="6" placeholder="https://…"></textarea>
     <div class="hint" id="lk_count" style="color:var(--muted);font-size:13px;margin-top:4px"></div>
     <label class="f" for="lk_pkg">Paketname (optional)</label>
-    <input type="text" id="lk_pkg" placeholder="z. B. Filmtitel" autocomplete="off">
+    <input type="text" id="lk_pkg" placeholder="Leer lassen = JDownloader benennt nach Dateinamen" autocomplete="off">
     <div class="actions">
       <button class="btn primary" type="button" id="lk_send">An JDownloader senden</button>
       <button class="btn ghost" type="button" id="lk_close">Schließen</button>
@@ -820,8 +820,9 @@ async function handleCnl() {
     return toast("Kein Click'n'Load gefunden – alle Links der Seite eingefügt, bitte prüfen", true);
   }
   try {
-    const r = await api("/api/cnl/decode", {method: "POST", body: {crypted: q.get("crypted") || "", jk: q.get("jk") || "", urls: q.get("urls") || "", keys: q.get("keys") || "", crypts: q.get("crypts") || ""}});
-    $("#lk_pkg").value = q.get("package") || q.get("from") || "";
+    const r = await api("/api/cnl/decode", {method: "POST", body: {crypted: q.get("crypted") || "", jk: q.get("jk") || "", urls: q.get("urls") || "", keys: q.get("keys") || "", crypts: q.get("crypts") || "", package: q.get("package") || ""}});
+    // Paketname aus den Dateinamen; leer lassen, wenn keiner erkennbar ist, dann benennt JDownloader selbst
+    $("#lk_pkg").value = r.package || "";
     openLinks(r.urls.join("\n"));
     toast(`Click'n'Load: ${r.urls.length} ${r.urls.length === 1 ? "Link" : "Links"} gefunden`);
   } catch (e) { toast(e.message, true); }

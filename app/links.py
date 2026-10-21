@@ -5,6 +5,7 @@ import json
 import os
 import re
 import time
+import urllib.parse
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
@@ -118,3 +119,30 @@ def decode_cnl(crypted="", jk="", urls=""):
     if not found:
         raise ValueError("Keine Links in den Click'n'Load-Daten")
     return found
+
+
+ARCHIVE_EXT = re.compile(r"(\.part\d+)?\.(rar|zip|7z|tar|gz|r\d{2}|\d{3}|mkv|mp4|avi|m4v|ts|mov|wmv|iso)$", re.IGNORECASE)
+
+
+def guess_package(urls):
+    """Paketname aus den Dateinamen der Links: gemeinsamer Anfang ohne Teil-Nummer und Endung.
+    Film.2026.part1.rar + Film.2026.part2.rar -> Film.2026; Serie.S01E01.mkv + Serie.S01E02.mkv -> Serie.S01"""
+    names = []
+    for u in urls:
+        last = urllib.parse.unquote(urllib.parse.urlparse(u).path.rstrip("/").rsplit("/", 1)[-1])
+        if ARCHIVE_EXT.search(last):
+            names.append(ARCHIVE_EXT.sub("", last))
+    if not names:
+        return ""
+    prefix = os.path.commonprefix(names)
+    if prefix != min(names, key=len):
+        season = re.search(r"(?i)(.*S\d{1,2})E\d*$", prefix)
+        if season:
+            # Mehrere Folgen einer Staffel ("Serie.S01E0"): Staffel behalten -> "Serie.S01"
+            prefix = season.group(1)
+        else:
+            # Mitten in einem Wort abgeschnitten: bis zum letzten Trennzeichen kürzen
+            cut = max(prefix.rfind(c) for c in "._- ")
+            prefix = prefix[:cut] if cut > 0 else prefix
+    prefix = prefix.strip("._- ")
+    return _clean_package(prefix) if len(prefix) >= 4 else ""
