@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#122230">
+<title>Mediasort – keine Verbindung</title>
+<style>
+  :root { --ink:#122230; --panel:#1a2d3d; --line:#2d465b; --text:#e8eef3; --muted:#8fa5b6; --amber:#f2b33d; --amber-ink:#2a1d04; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100vh; background: var(--ink); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { display: grid; place-items: center; padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); }
+  .card { width: min(400px, 100%); background: var(--panel); border-radius: 18px; padding: 26px 22px; text-align: center; }
+  img { width: 72px; height: 72px; border-radius: 18px; }
+  h1 { font-size: 22px; margin: 16px 0 6px; }
+  p { color: var(--muted); font-size: 15px; line-height: 1.45; margin: 0 0 18px; }
+  .btn { display: block; width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 600;
+    text-decoration: none; border: 1px solid var(--line); color: var(--text); background: none; cursor: pointer; margin-top: 10px; }
+  .btn.primary { background: var(--amber); border-color: var(--amber); color: var(--amber-ink); }
+  .status { margin-top: 16px; font-size: 13px; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .25; } }
+  .tip { margin-top: 18px; font-size: 13px; color: var(--muted); text-align: left; border-top: 1px solid var(--line); padding-top: 14px; }
+  .tip b { color: var(--text); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <img src="/apple-touch-icon.png" alt="">
+    <h1>Keine Verbindung zu Mediasort</h1>
+    <p>Wahrscheinlich ist <b>Tailscale</b> gerade nicht verbunden. Schalte die Verbindung in der Tailscale-App ein, dann geht es hier von selbst weiter.</p>
+    <a class="btn primary" id="open" href="#">Tailscale öffnen</a>
+    <button class="btn" id="retry" type="button">Erneut versuchen</button>
+    <div class="status"><span class="dot"></span><span id="st">Warte auf Verbindung …</span></div>
+    <div class="tip" id="tip"></div>
+  </div>
+<script>
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const android = /Android/.test(ua);
+  const open = document.getElementById("open");
+  if (android) {
+    // Öffnet die Tailscale-App direkt
+    open.href = "intent://#Intent;package=com.tailscale.ipn;end";
+    document.getElementById("tip").innerHTML = "<b>Tipp:</b> In den Android-Einstellungen unter <i>Netzwerk → VPN → Tailscale</i> „Durchgehend aktives VPN“ einschalten. Dann ist Tailscale immer verbunden.";
+  } else if (ios) {
+    // Startet den Kurzbefehl "Tailscale verbinden" (einmalig in der Kurzbefehle-App anlegen)
+    open.href = "shortcuts://run-shortcut?name=" + encodeURIComponent("Tailscale verbinden");
+    open.textContent = "Tailscale verbinden";
+    document.getElementById("tip").innerHTML = "<b>Einmalig einrichten:</b> In der Kurzbefehle-App einen Kurzbefehl namens <b>Tailscale verbinden</b> anlegen, mit der Aktion <i>Tailscale → Verbinden</i>. Dann schaltet dieser Knopf das VPN direkt ein.";
+  } else {
+    open.style.display = "none";
+    document.getElementById("tip").innerHTML = "Öffne Tailscale auf diesem Gerät und klicke auf <b>Connect</b>.";
+  }
+
+  async function check() {
+    try {
+      const r = await fetch("/api/health", {cache: "no-store"});
+      if (r.ok) { document.getElementById("st").textContent = "Verbunden, lade Mediasort …"; location.replace("/"); return; }
+    } catch (e) {}
+    setTimeout(check, 3000);
+  }
+  document.getElementById("retry").onclick = () => location.replace("/");
+  check();
+</script>
+</body>
+</html>

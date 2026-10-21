@@ -22,6 +22,7 @@ STATIC_FILES = {
     "/icon.png": "image/png", "/icon-192.png": "image/png", "/icon-512.png": "image/png",
     "/icon-maskable-512.png": "image/png", "/apple-touch-icon.png": "image/png",
     "/manifest.webmanifest": "application/manifest+json",
+    "/sw.js": "text/javascript; charset=utf-8", "/offline.html": "text/html; charset=utf-8",
 }
 # Ohne Anmeldung erreichbar
 PUBLIC = {"/", "/index.html", "/api/health", "/api/auth/me", "/api/auth/login", "/api/auth/setup",

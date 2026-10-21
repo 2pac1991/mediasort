@@ -837,6 +837,9 @@ async function status() {
   } catch (e) {}
 }
 
+// Service Worker für die Hinweisseite ohne Verbindung (nur über HTTPS, also über Tailscale)
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("/sw.js").catch(() => {});
+
 let started = false;
 async function start(user) {
   me = user; renderMe();
