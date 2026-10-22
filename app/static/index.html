@@ -146,27 +146,54 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
 .sheethead h2{margin:0}
 .xbtn{flex-shrink:0;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--ink);color:var(--text);font-size:16px;cursor:pointer}
 
-/* JDownloader live */
-.jdstate{display:flex;align-items:center;gap:8px;margin:12px 0 4px;flex-wrap:wrap}
-.jdstate .grow{display:none}
-#jd_state{flex-basis:100%}
-.jdh{font-weight:600;font-size:15px;margin:20px 0 8px}
-.jdpkg{background:var(--ink);border-radius:var(--r-sm);padding:12px}
-.jdpkg b{display:block;word-break:break-word}
-.jdpkg .hint{color:var(--muted);font-size:12px;margin-top:3px}
-.jdpkg .st{font-size:12px;margin-top:4px;color:var(--warn)}
-.jdbar{height:6px;border-radius:3px;background:var(--panel-2);overflow:hidden;margin-top:8px}
-.jdbar i{display:block;height:100%;background:var(--ok)}
-.jdpkg .row2{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.jdpkg .row2 .btn{margin:0}
-.jdfiles{margin-top:10px;border-top:1px solid var(--line);padding-top:6px}
-.jdfile{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid rgba(45,70,91,.5)}
-.jdfile:last-child{border-bottom:0}
-.jdfile .n{flex:1;min-width:0;font-size:13px;word-break:break-all}
-.jdfile .n small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
-.jdfile .have{color:var(--warn)}
-.jdfile .btn{flex-shrink:0;padding:3px 9px}
-.jdremoved{background:rgba(242,179,61,.1);border-radius:var(--r-sm);padding:10px 12px;font-size:13px;margin-top:12px}
+/* JDownloader live: im Stil des Desktop-JDownloaders */
+.jdsheet{background:#e8eaed;color:#1f2328;padding-left:0;padding-right:0;padding-bottom:0;display:flex;flex-direction:column;font-family:"Segoe UI",system-ui,-apple-system,sans-serif}
+.jdsheet .sheethead.jdtitlebar{background:linear-gradient(#fdfdfd,#e3e6ea);border-bottom:1px solid #c5cad1;margin-left:0;margin-right:0;padding-left:14px;padding-right:14px}
+.jdlogo{display:flex;align-items:center;gap:10px;min-width:0}
+.jdmark{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#ffb74d,#f57c00);color:#fff;font-weight:800;font-size:15px;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.25);flex-shrink:0}
+.jdlogo h2{font-family:inherit;font-size:17px;font-weight:600;color:#1f2328;margin:0}
+.jdlogo small{display:block;color:#5f6b7a;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jdsheet .xbtn{background:#fff;border-color:#c5cad1;color:#333}
+.jdtabs{display:flex;gap:2px;padding:8px 10px 0;background:#d5d9de;border-bottom:1px solid #b9bfc7}
+.jdtabs button{border:1px solid #b9bfc7;border-bottom:0;background:linear-gradient(#eef0f2,#dde1e5);color:#3b4450;padding:7px 12px;border-radius:6px 6px 0 0;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:-1px}
+.jdtabs button[aria-selected=true]{background:#fff;color:#111;border-color:#b9bfc7;position:relative;z-index:1}
+.jdtabs span{color:#6b7684;font-weight:500}
+.jdremoved{background:#fff8e1;border-bottom:1px solid #f0d27a;color:#6d5300;font-size:12.5px;padding:8px 12px;animation:jdfade 15s forwards}
+@keyframes jdfade{0%,85%{opacity:1}100%{opacity:0}}
+.jdtable{flex:1;background:#fff;overflow:auto}
+.jdhead,.jdrow{display:grid;grid-template-columns:minmax(0,1fr) 64px 96px;align-items:center;column-gap:8px}
+.jdhead{position:sticky;top:0;z-index:1;background:linear-gradient(#f7f8f9,#e6e9ec);border-bottom:1px solid #c9ced5;font-size:12px;color:#4a5562;font-weight:600;padding:5px 10px}
+.jdhead span:nth-child(2),.jdrow .sz{text-align:right}
+.jdrow{padding:6px 10px;border-bottom:1px solid #edf0f2;font-size:13px;color:#1f2328}
+.jdrow.pkg{background:#f3f5f7;font-weight:600;cursor:pointer}
+.jdrow.pkg:hover{background:#e9f1fb}
+.jdrow.jdf{padding-left:34px}
+.jdrow.jdf:nth-child(even){background:#fbfcfd}
+.jdrow .nm{display:flex;align-items:flex-start;gap:6px;min-width:0}
+.jdrow .nm .tx{min-width:0;word-break:break-all}
+.jdrow .nm small{display:block;font-weight:400;color:#6b7684;font-size:11.5px;margin-top:1px}
+.jdrow .nm small.err{color:#c62828}
+.jdrow .nm small.have{color:#b26a00}
+.jdrow .tw{width:12px;flex-shrink:0;color:#6b7684;font-size:10px;margin-top:3px}
+.jdrow .ic{flex-shrink:0}
+.jdrow .sz{font-size:12px;color:#3b4450;font-weight:400}
+.jdrow .pr{display:flex;align-items:center;gap:4px}
+.jdprog{flex:1;height:16px;border:1px solid #9fbf8f;border-radius:3px;background:#f4f7f2;position:relative;overflow:hidden}
+.jdprog i{position:absolute;inset:0 auto 0 0;background:linear-gradient(#a8e08a,#5cb338)}
+.jdprog b{position:relative;display:block;text-align:center;font-size:10.5px;line-height:14px;color:#1f3a12;font-weight:600}
+.jdav{font-size:12px;font-weight:500}
+.jdav.on{color:#2e7d32}.jdav.off{color:#c62828}.jdav.unk{color:#8a6d00}
+.jdacts{display:flex;gap:4px;justify-content:flex-end;grid-column:1/-1;margin-top:4px}
+.jdacts button{border:1px solid #c5cad1;background:linear-gradient(#fff,#eceff2);color:#333;border-radius:4px;font-size:12px;padding:3px 9px;cursor:pointer}
+.jdacts button.go{color:#1b5e20;border-color:#9fbf8f}
+.jdacts button.del{color:#b71c1c}
+.jdempty{padding:28px 14px;text-align:center;color:#6b7684;font-size:13px}
+.jdtoolbar{position:sticky;bottom:0;display:flex;align-items:center;gap:8px;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(#eef0f2,#d9dde2);border-top:1px solid #b9bfc7}
+.jdtool{width:38px;height:38px;border-radius:50%;border:1px solid #aab1ba;background:linear-gradient(#fff,#e3e6ea);font-size:15px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.jdtool.go{color:#2e7d32}.jdtool.pause{color:#b8860b}.jdtool.stop{color:#c62828}
+.jdtool[aria-pressed=true]{background:linear-gradient(#ffe9a8,#f7c948);border-color:#c9a227}
+.jdaddall{border:1px solid #9fbf8f;background:linear-gradient(#f3fbef,#d6eecb);color:#1b5e20;border-radius:6px;padding:8px 10px;font-size:12.5px;font-weight:600;cursor:pointer}
+.jdspeed{margin-left:auto;font-size:12.5px;color:#3b4450;font-weight:600;white-space:nowrap}
 
 /* Benachrichtigung */
 .steps{padding-left:20px;margin:14px 0 0}
@@ -497,18 +524,27 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
 </div>
 
 <div class="scrim" id="jdscrim" hidden>
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="jdtitle">
-    <div class="sheethead"><h2 id="jdtitle">JDownloader</h2><button class="xbtn" type="button" id="jd_x" aria-label="Schließen">✕</button></div>
-    <div class="jdstate"><span id="jd_state" class="hint" style="color:var(--muted)">Verbinde …</span>
-      <span class="grow"></span>
-      <button class="btn small" type="button" id="jd_start">▶ Start</button>
-      <button class="btn small" type="button" id="jd_pause">⏸ Pause</button></div>
-    <h3 class="jdh">Linksammler</h3>
-    <div id="jd_grabber" class="ulist"></div>
-    <div id="jd_removed"></div>
-    <h3 class="jdh">Downloads</h3>
-    <div id="jd_downloads" class="ulist"></div>
-    <div class="actions"><button class="btn" type="button" id="jd_close">Schließen</button></div>
+  <div class="sheet jdsheet" role="dialog" aria-modal="true" aria-labelledby="jdtitle">
+    <div class="sheethead jdtitlebar">
+      <div class="jdlogo"><span class="jdmark">JD</span><div><h2 id="jdtitle">JDownloader 2</h2><small id="jd_state">Verbinde …</small></div></div>
+      <button class="xbtn" type="button" id="jd_x" aria-label="Schließen">✕</button>
+    </div>
+    <div class="jdtabs" role="tablist">
+      <button type="button" role="tab" data-jdtab="downloads" aria-selected="true">⬇ Download <span id="jd_n_dl"></span></button>
+      <button type="button" role="tab" data-jdtab="grabber" aria-selected="false">🔗 LinkGrabber <span id="jd_n_lg"></span></button>
+    </div>
+    <div id="jd_removed" class="jdremoved" hidden></div>
+    <div class="jdtable">
+      <div class="jdhead"><span>Name</span><span>Größe</span><span id="jd_col3">Fortschritt</span></div>
+      <div id="jd_rows"></div>
+    </div>
+    <div class="jdtoolbar">
+      <button type="button" class="jdtool go" id="jd_start" title="Downloads starten" aria-label="Start">▶</button>
+      <button type="button" class="jdtool pause" id="jd_pause" title="Pause" aria-label="Pause">⏸</button>
+      <button type="button" class="jdtool stop" id="jd_stop" title="Stoppen" aria-label="Stopp">■</button>
+      <button type="button" class="jdaddall" id="jd_addall" hidden>➕ Alle zum Download hinzufügen</button>
+      <span class="jdspeed" id="jd_speed"></span>
+    </div>
   </div>
 </div>
 
@@ -893,7 +929,7 @@ $("#lk_send").onclick = async () => {
     toast(`${r.count} ${r.count === 1 ? "Link" : "Links"} an JDownloader gesendet`);
     $("#lk_text").value = ""; $("#lk_pkg").value = ""; countLinks();
     closeLinks();
-    if (jdLive) setTimeout(openJd, 350);
+    if (jdLive) setTimeout(() => openJd("grabber"), 350);
   } catch (e) { toast(e.message, true); }
   b.disabled = false;
 };
@@ -909,10 +945,13 @@ $("#lk_x").onclick = () => closeLinks();
 $("#linkscrim").onclick = e => { if (e.target === $("#linkscrim")) closeLinks(); };
 
 /* JDownloader live */
-let jdTimer = null;
+let jdTimer = null, jdTab = "downloads", jdLast = null;
 const STATES = {RUNNING: "Lädt", PAUSE: "Pausiert", IDLE: "Bereit", STOPPED: "Gestoppt", STOPPING: "Stoppt …"};
-const fmtEta = s => s == null || s < 0 ? "" : s >= 3600 ? `${Math.floor(s / 3600)} Std ${Math.floor(s % 3600 / 60)} Min` : s >= 60 ? `${Math.floor(s / 60)} Min` : `${s} Sek`;
-function openJd() {
+const fmtEta = s => s == null || s < 0 ? "" : s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m` : s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
+const jdOpen = {grabber: new Set(), downloads: new Set()};
+const fileIcon = n => /\.(mkv|mp4|avi|m4v|mov|wmv|ts)$/i.test(n) ? "🎞" : /\.(rar|r\d\d|zip|7z|\d{3})$/i.test(n) ? "🗜" : /\.(srt|ass|sub)$/i.test(n) ? "💬" : "📄";
+function openJd(tab) {
+  if (tab) setJdTab(tab);
   if ($("#jdscrim").hidden) history.pushState({sheet: "jd"}, "");
   $("#jdscrim").hidden = false;
   refreshJd();
@@ -924,71 +963,96 @@ function closeJd(fromHistory) {
   if (!fromHistory && history.state && history.state.sheet === "jd") history.back();
 }
 window.addEventListener("popstate", () => closeJd(true));
-const jdOpen = {grabber: new Set(), downloads: new Set()};
-const AVAIL = {ONLINE: "✅ online", OFFLINE: "❌ offline", UNKNOWN: "❔ wird geprüft", TEMP_UNKNOWN: "❔ wird geprüft"};
-function jdFiles(kind, pkg, files) {
-  if (!jdOpen[kind].has(String(pkg.uuid))) return "";
-  const mine = files.filter(l => String(l.packageUUID) === String(pkg.uuid));
-  if (!mine.length) return `<div class="jdfiles hint" style="color:var(--muted)">Lade Dateien …</div>`;
-  return `<div class="jdfiles">${mine.map(l => {
-    const info = kind === "grabber"
-      ? [fmtSize(l.bytesTotal), AVAIL[l.availability] || ""].filter(Boolean).join(" · ")
-      : [l.bytesTotal ? Math.round((l.bytesLoaded || 0) / l.bytesTotal * 100) + " %" : "", fmtSize(l.bytesTotal), l.finished ? "✅ fertig" : (l.status || "")].filter(Boolean).join(" · ");
-    return `<div class="jdfile"><div class="n">${esc(l.name)}<small>${esc(info)}</small>${l.existing ? `<small class="have">⚠️ ${esc(l.existing)}</small>` : ""}</div>
-      <button class="btn small danger" type="button" data-del-link="${l.uuid}" data-kind="${kind}" data-name="${esc(l.name)}" aria-label="Datei löschen">🗑</button></div>`;
-  }).join("")}</div>`;
+function setJdTab(tab) {
+  jdTab = tab;
+  document.querySelectorAll("[data-jdtab]").forEach(b => b.setAttribute("aria-selected", b.dataset.jdtab === tab));
+  $("#jd_col3").textContent = tab === "grabber" ? "Verfügbar" : "Fortschritt";
+  $("#jd_addall").hidden = tab !== "grabber";
+  if (jdLast) renderJd(jdLast);
 }
-function jdPackage(kind, p, files) {
-  const open = jdOpen[kind].has(String(p.uuid));
-  let info, extra = "", bar = "";
-  if (kind === "grabber") {
-    info = `${p.childCount || 0} ${p.childCount === 1 ? "Datei" : "Dateien"}${p.bytesTotal ? " · " + fmtSize(p.bytesTotal) : ""}${(p.hosts || []).length ? " · " + esc(p.hosts.join(", ")) : ""}`;
-    extra = `<div class="hint">${p.onlineCount ? `✅ ${p.onlineCount} online ` : ""}${p.offlineCount ? `❌ ${p.offlineCount} offline ` : ""}${p.unknownCount ? `❔ ${p.unknownCount} wird geprüft` : ""}</div>`;
-  } else {
-    const pct = p.bytesTotal ? Math.min(100, Math.round(p.bytesLoaded / p.bytesTotal * 100)) : (p.finished ? 100 : 0);
-    const state = p.finished ? "✅ Fertig" : p.running ? `⬇ ${fmtSize(p.speed || 0)}/s${p.eta > 0 ? " · noch " + fmtEta(p.eta) : ""}` : (p.enabled === false ? "Deaktiviert" : "Wartet");
-    info = `${pct} % · ${fmtSize(p.bytesLoaded || 0)} von ${fmtSize(p.bytesTotal || 0)} · ${state}`;
-    bar = `<div class="jdbar"><i style="width:${pct}%"></i></div>`;
+document.querySelectorAll("[data-jdtab]").forEach(b => b.onclick = () => setJdTab(b.dataset.jdtab));
+function jdProgress(loaded, total, finished) {
+  const pct = total ? Math.min(100, Math.round((loaded || 0) / total * 100)) : (finished ? 100 : 0);
+  return `<div class="jdprog"><i style="width:${pct}%"></i><b>${pct} %</b></div>`;
+}
+function jdAvail(a, on, off, unk) {
+  if (a !== undefined) return a === "ONLINE" ? `<span class="jdav on">● Online</span>` : a === "OFFLINE" ? `<span class="jdav off">● Offline</span>` : `<span class="jdav unk">● Prüfe …</span>`;
+  return [on ? `<span class="jdav on">${on} ✓</span>` : "", off ? `<span class="jdav off">${off} ✗</span>` : "", unk ? `<span class="jdav unk">${unk} ?</span>` : ""].join(" ");
+}
+function renderJd(r) {
+  const kind = jdTab, pkgs = (kind === "grabber" ? r.grabber : r.downloads) || [];
+  const files = (kind === "grabber" ? r.links_grabber : r.links_downloads) || [];
+  if (!pkgs.length) {
+    $("#jd_rows").innerHTML = `<div class="jdempty">${kind === "grabber" ? "Der LinkGrabber ist leer.<br>Neue Links landen hier, bis der Download startet." : "Keine Downloads."}</div>`;
+    return;
   }
-  return `<div class="jdpkg"><b>${esc(p.name)}</b><div class="hint">${info}</div>${extra}
-    ${p.status && !p.finished ? `<div class="st">${esc(p.status)}</div>` : ""}${bar}
-    <div class="row2">
-      ${kind === "grabber" ? `<button class="btn primary small" type="button" data-start="${p.uuid}">⬇ Download starten</button>` : ""}
-      <button class="btn small" type="button" data-toggle="${p.uuid}" data-kind="${kind}">${open ? "▴ Dateien" : "▾ Dateien"}</button>
-      <button class="btn small danger" type="button" data-del-pkg="${p.uuid}" data-kind="${kind}" data-name="${esc(p.name)}">🗑 Löschen</button>
-    </div>${jdFiles(kind, p, files)}</div>`;
+  $("#jd_rows").innerHTML = pkgs.map(p => {
+    const open = jdOpen[kind].has(String(p.uuid));
+    const sub = kind === "grabber"
+      ? `${p.childCount || 0} Dateien${(p.hosts || []).length ? " · " + esc(p.hosts.join(", ")) : ""}`
+      : p.finished ? "Fertig" : p.running ? `${fmtSize(p.speed || 0)}/s${p.eta > 0 ? " · " + fmtEta(p.eta) : ""}` : (p.enabled === false ? "Deaktiviert" : (p.status || "Wartet"));
+    const err = p.status && !p.finished && /captcha|fehler|error|offline|unsupported/i.test(p.status);
+    let html = `<div class="jdrow pkg" data-toggle="${p.uuid}">
+      <div class="nm"><span class="tw">${open ? "▼" : "▶"}</span><span class="ic">📦</span><div class="tx">${esc(p.name)}
+        <small class="${err ? "err" : ""}">${err ? esc(p.status) : sub}</small></div></div>
+      <span class="sz">${fmtSize(p.bytesTotal)}</span>
+      <div class="pr">${kind === "grabber" ? jdAvail(undefined, p.onlineCount, p.offlineCount, p.unknownCount) : jdProgress(p.bytesLoaded, p.bytesTotal, p.finished)}</div>
+      <div class="jdacts">
+        ${kind === "grabber" ? `<button type="button" class="go" data-start="${p.uuid}">▶ Starten</button>` : ""}
+        <button type="button" class="del" data-del-pkg="${p.uuid}" data-name="${esc(p.name)}">🗑 Löschen</button></div></div>`;
+    if (open) {
+      const mine = files.filter(l => String(l.packageUUID) === String(p.uuid));
+      html += mine.length ? mine.map(l => `<div class="jdrow jdf">
+          <div class="nm"><span class="ic">${fileIcon(l.name || "")}</span><div class="tx">${esc(l.name)}
+            ${l.existing ? `<small class="have">⚠ ${esc(l.existing)}</small>` : kind === "downloads" && l.status && !l.finished ? `<small class="${/captcha|fehler|error|offline|unsupported/i.test(l.status) ? "err" : ""}">${esc(l.status)}</small>` : ""}</div></div>
+          <span class="sz">${fmtSize(l.bytesTotal)}</span>
+          <div class="pr">${kind === "grabber" ? jdAvail(l.availability) : jdProgress(l.bytesLoaded, l.bytesTotal, l.finished)}
+            <button type="button" class="jdtool" style="width:26px;height:26px;font-size:12px" data-del-link="${l.uuid}" data-name="${esc(l.name)}" aria-label="Datei löschen">🗑</button></div></div>`).join("")
+        : `<div class="jdrow jdf"><div class="nm" style="color:#6b7684">Lade Dateien …</div></div>`;
+    }
+    return html;
+  }).join("");
+  wireJd();
 }
 async function refreshJd() {
   if (document.hidden) return;
   try {
     const q = `?open_grabber=${[...jdOpen.grabber].join(",")}&open_downloads=${[...jdOpen.downloads].join(",")}`;
     const r = await api("/api/jd/status" + q);
-    $("#jd_state").innerHTML = `<b>${esc(r.device)}</b> · ${STATES[r.state] || esc(r.state || "")}`;
-    const g = r.grabber || [], d = r.downloads || [];
-    $("#jd_grabber").innerHTML = g.length ? g.map(p => jdPackage("grabber", p, r.links_grabber || [])).join("")
-      : `<p class="hint" style="color:var(--muted)">Leer. Neue Links landen hier, bis der Download startet.</p>`;
-    $("#jd_downloads").innerHTML = d.length ? d.map(p => jdPackage("downloads", p, r.links_downloads || [])).join("")
-      : `<p class="hint" style="color:var(--muted)">Keine Downloads.</p>`;
-    const rem = (r.removed || []).filter(x => Date.now() / 1000 - x.ts < 600);
-    $("#jd_removed").innerHTML = rem.length ? `<div class="jdremoved">🧹 Schon vorhanden, automatisch entfernt:<br>${rem.map(x => esc(x.text)).join("<br>")}</div>` : "";
-    wireJd();
+    jdLast = r;
+    $("#jd_state").textContent = `${r.device} · ${STATES[r.state] || r.state || ""}`;
+    $("#jd_n_dl").textContent = `(${(r.downloads || []).length})`;
+    $("#jd_n_lg").textContent = `(${(r.grabber || []).length})`;
+    const speed = (r.downloads || []).reduce((n, p) => n + (p.running ? p.speed || 0 : 0), 0);
+    $("#jd_speed").textContent = speed ? `⬇ ${fmtSize(speed)}/s` : "";
+    $("#jd_pause").setAttribute("aria-pressed", r.state === "PAUSE");
+    // Hinweis auf automatisch Entferntes nur 15 Sekunden zeigen
+    const rem = (r.removed || []).filter(x => Date.now() / 1000 - x.ts < 15);
+    const box = $("#jd_removed");
+    if (rem.length) {
+      const html = `🧹 Schon vorhanden, entfernt: ${rem.map(x => esc(x.text)).join(", ")}`;
+      if (box.hidden || box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; box.hidden = false; box.style.animation = "none"; box.offsetHeight; box.style.animation = ""; }
+    } else box.hidden = true;
+    renderJd(r);
   } catch (e) { $("#jd_state").textContent = e.message; }
 }
 function wireJd() {
-  const root = $("#jdscrim");
+  const root = $("#jd_rows");
+  root.querySelectorAll("[data-toggle]").forEach(row => row.onclick = e => {
+    if (e.target.closest("button")) return;
+    const set = jdOpen[jdTab], id = row.dataset.toggle;
+    set.has(id) ? set.delete(id) : set.add(id);
+    renderJd(jdLast); refreshJd();
+  });
   root.querySelectorAll("[data-start]").forEach(b => b.onclick = async () => {
     b.disabled = true;
-    try { await api("/api/jd/start", {method: "POST", body: {ids: [b.dataset.start]}}); toast("Download gestartet"); refreshJd(); }
+    try { await api("/api/jd/start", {method: "POST", body: {ids: [b.dataset.start]}}); toast("Download gestartet"); setJdTab("downloads"); refreshJd(); }
     catch (e) { toast(e.message, true); b.disabled = false; }
   });
-  root.querySelectorAll("[data-toggle]").forEach(b => b.onclick = () => {
-    const set = jdOpen[b.dataset.kind], id = b.dataset.toggle;
-    set.has(id) ? set.delete(id) : set.add(id); refreshJd();
-  });
   const del = async (b, body, what) => {
-    if (!confirm(`${what} „${b.dataset.name}“ im JDownloader löschen?${b.dataset.kind === "downloads" ? "\nUnfertige Teile werden dabei auch gelöscht." : ""}`)) return;
+    if (!confirm(`${what} „${b.dataset.name}“ im JDownloader löschen?${jdTab === "downloads" ? "\nUnfertige Teile werden dabei auch gelöscht." : ""}`)) return;
     b.disabled = true;
-    try { await api("/api/jd/remove", {method: "POST", body: {kind: b.dataset.kind, name: b.dataset.name, ...body}}); toast("Gelöscht"); refreshJd(); }
+    try { await api("/api/jd/remove", {method: "POST", body: {kind: jdTab, name: b.dataset.name, ...body}}); toast("Gelöscht"); refreshJd(); }
     catch (e) { toast(e.message, true); b.disabled = false; }
   };
   root.querySelectorAll("[data-del-pkg]").forEach(b => b.onclick = () => del(b, {packages: [b.dataset.delPkg]}, "Paket"));
@@ -998,10 +1062,16 @@ async function jdControl(action, msg) {
   try { await api("/api/jd/control", {method: "POST", body: {action}}); toast(msg); refreshJd(); } catch (e) { toast(e.message, true); }
 }
 $("#jd_start").onclick = () => jdControl("start", "Downloads gestartet");
-$("#jd_pause").onclick = () => jdControl($("#jd_state").textContent.includes("Pausiert") ? "resume" : "pause", "Umgeschaltet");
-$("#jdbtn").onclick = openJd;
+$("#jd_pause").onclick = () => jdControl(jdLast && jdLast.state === "PAUSE" ? "resume" : "pause", jdLast && jdLast.state === "PAUSE" ? "Fortgesetzt" : "Pausiert");
+$("#jd_stop").onclick = () => jdControl("stop", "Downloads gestoppt");
+$("#jd_addall").onclick = async () => {
+  const ids = ((jdLast && jdLast.grabber) || []).map(p => p.uuid);
+  if (!ids.length) return toast("Der LinkGrabber ist leer", true);
+  try { await api("/api/jd/start", {method: "POST", body: {ids}}); toast("Alle Pakete zum Download hinzugefügt"); setJdTab("downloads"); refreshJd(); }
+  catch (e) { toast(e.message, true); }
+};
+$("#jdbtn").onclick = () => openJd();
 $("#jd_x").onclick = () => closeJd();
-$("#jd_close").onclick = () => closeJd();
 $("#jdscrim").onclick = e => { if (e.target === $("#jdscrim")) closeJd(); };
 
 /* Benachrichtigung */

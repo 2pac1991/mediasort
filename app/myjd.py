@@ -206,6 +206,8 @@ def start_packages(package_ids):
 def control(action):
     if action == "start":
         _device_call("/downloadcontroller/start")
+    elif action == "stop":
+        _device_call("/downloadcontroller/stop")
     elif action == "pause":
         _device_call("/downloadcontroller/pause", [True])
     elif action == "resume":
