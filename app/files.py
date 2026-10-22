@@ -217,8 +217,16 @@ def cleanup_package(path, settings):
         return None
     if not _is_finished_leftover(folder, int(settings.get("min_size_mb") or 0) * 1024 * 1024):
         return None
-    trash_path(folder, "Mediasort")
+    _discard(folder, settings)
     return folder
+
+
+def _discard(folder, settings):
+    """Reste-Ordner endgültig löschen oder, falls so eingestellt, in den Papierkorb legen."""
+    if settings.get("cleanup_permanent", True):
+        shutil.rmtree(folder, ignore_errors=True)
+    else:
+        trash_path(folder, "Mediasort")
 
 
 def cleanup_stale(settings, min_age=1800):
@@ -237,7 +245,7 @@ def cleanup_stale(settings, min_age=1800):
                 if time.time() - _newest_mtime(entry.path) < min_age:
                     continue
                 if _is_finished_leftover(entry.path, min_size):
-                    trash_path(entry.path, "Mediasort")
+                    _discard(entry.path, settings)
                     done.append(entry.name)
             except OSError:
                 continue

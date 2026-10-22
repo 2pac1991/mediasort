@@ -344,7 +344,8 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
           <option value="skip">Überspringen</option><option value="trash_source">Download löschen (Papierkorb)</option><option value="overwrite">Überschreiben</option><option value="keep_both">Beide behalten</option>
         </select>
         <label class="switch"><input type="checkbox" name="include_subtitles"> Untertitel mitnehmen</label>
-        <label class="switch"><input type="checkbox" name="cleanup_downloads"> Download-Ordner aufräumen (Paketordner samt Resten wie nfo/txt/rar nach dem Einsortieren in den Papierkorb)</label>
+        <label class="switch"><input type="checkbox" name="cleanup_downloads"> Download-Ordner aufräumen (Paketordner samt Resten wie nfo/txt/rar nach dem Einsortieren entfernen)</label>
+        <label class="switch"><input type="checkbox" name="cleanup_permanent"> Reste endgültig löschen (nicht in den Papierkorb)</label>
         <label class="f" for="min_size_mb">Dateien ignorieren unter (MB)</label>
         <input type="number" id="min_size_mb" name="min_size_mb" min="0">
         <label class="f" for="anime_keywords">Ordnernamen, die Anime bedeuten</label>

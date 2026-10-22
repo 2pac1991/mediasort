@@ -36,6 +36,8 @@ DEFAULTS = {
     "trash_days": 14,
     # Nach dem Einsortieren Paketordner samt Resten (nfo, txt, rar ...) aus dem Download-Ordner entfernen
     "cleanup_downloads": True,
+    # Reste endgültig löschen statt in den Papierkorb
+    "cleanup_permanent": True,
     # Ordner, den JDownloader mit der Erweiterung "Folder Watch" überwacht (Auftragsdateien .crawljob)
     "jd_watch_dir": "",
     # Alternativ direkt über My.JDownloader (wie die Handy-Apps)
