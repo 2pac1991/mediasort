@@ -147,6 +147,12 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, st)
                 except myjd.MyJDError as e:
                     raise ValueError(str(e)) from e
+            if u.path == "/api/jd/uhd":
+                self._need(add_links=True)
+                try:
+                    return self._send(200, myjd.uhd_packages() if myjd.configured() else [])
+                except myjd.MyJDError as e:
+                    raise ValueError(str(e)) from e
             if u.path == "/api/trash":
                 return self._send(200, {"items": files.list_trash(), "days": config.get().get("trash_days")})
             if u.path == "/api/status":
@@ -270,6 +276,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, {"ok": True})
                 except myjd.MyJDError as e:
                     raise ValueError(str(e)) from e
+            if u.path == "/api/jd/uhd/ok":
+                self._need(add_links=True)
+                myjd.uhd_confirm(int(body["uuid"]))
+                log.info("%s will den 4K-Film behalten: %s", self.me["name"], body.get("name", ""))
+                return self._send(200, {"ok": True})
             if u.path == "/api/jd/remove":
                 self._need(add_links=True)
                 try:

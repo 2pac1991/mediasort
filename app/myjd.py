@@ -249,6 +249,41 @@ def remove(kind, link_ids=(), package_ids=()):
         _device_call("/downloadsV2/cleanup", [lids, pids, "DELETE_ALL", "REMOVE_LINKS_AND_DELETE_FILES", "SELECTED"])
 
 
+# 4K/UHD-Filme: sehr groß, deshalb wird nachgefragt, ob das so gewollt ist
+UHD = re.compile(r"(?i)(2160p|(?<![a-z0-9])(4k|uhd)(?![a-z0-9]))")
+UHD_OK_FILE = os.path.join(config.CONFIG_DIR, "uhd-ok.json")
+
+
+def _uhd_ok():
+    try:
+        with open(UHD_OK_FILE, encoding="utf-8") as f:
+            return {int(k): v for k, v in json.load(f).items()}
+    except (OSError, ValueError):
+        return {}
+
+
+def uhd_confirm(uuid):
+    """Paket als "so gewollt" merken (30 Tage)."""
+    with _lock:
+        ok = {k: v for k, v in _uhd_ok().items() if time.time() - v < 30 * 86400}
+        ok[int(uuid)] = time.time()
+        tmp = UHD_OK_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(ok, f)
+        os.replace(tmp, UHD_OK_FILE)
+
+
+def uhd_packages():
+    """4K-Pakete im Linksammler und in der Downloadliste, die noch niemand bestätigt hat."""
+    ok, found = _uhd_ok(), []
+    for kind, path in (("grabber", "/linkgrabberv2/queryPackages"), ("downloads", "/downloadsV2/queryPackages")):
+        pkgs = _device_call(path, [{"bytesTotal": True, "childCount": True, "maxResults": -1, "startAt": 0}]) or []
+        for p in pkgs:
+            if UHD.search(p.get("name") or "") and int(p["uuid"]) not in ok:
+                found.append({"kind": kind, "uuid": p["uuid"], "name": p.get("name", ""), "bytes": p.get("bytesTotal") or 0})
+    return found
+
+
 def remove_existing():
     """Dateien im Linksammler entfernen, die schon in der Mediathek sind. Liefert die entfernten Namen."""
     from . import library

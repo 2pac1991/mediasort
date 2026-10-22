@@ -318,6 +318,20 @@ details summary{cursor:pointer}
   main{max-width:none;padding:8px 40px 140px 296px}
 }
 
+
+/* ---------- Rückfrage-Dialog (z. B. 4K-Warnung) ---------- */
+.dlgscrim{position:fixed;inset:0;z-index:80;background:rgba(4,6,9,.66);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:grid;place-items:center;padding:20px;animation:fade .2s ease-out}
+.dlgscrim[hidden]{display:none}
+.dlg{width:min(420px,100%);background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r-xl);box-shadow:var(--shadow-lg);padding:26px 22px 20px;text-align:center;animation:pop .28s var(--ease)}
+@keyframes pop{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
+.dlg .badge4k{display:inline-grid;place-items:center;width:64px;height:64px;border-radius:18px;background:var(--amber-soft);color:var(--amber);font-weight:800;font-size:20px;letter-spacing:-.02em;margin-bottom:14px;border:1px solid rgba(245,184,61,.3)}
+.dlg h2{margin:0 0 8px;font-size:20px;font-weight:750;letter-spacing:-.02em}
+.dlg .dname{font-weight:600;color:var(--text);word-break:break-word;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;margin:12px 0;font-size:14px}
+.dlg p{color:var(--muted);margin:0;font-size:14.5px;line-height:1.5}
+.dlg .acts{display:grid;gap:10px;margin-top:20px}
+.dlg .acts .btn{width:100%;justify-content:center;padding:13px}
+.btn.danger{background:var(--bad-soft);color:var(--bad);border-color:rgba(255,107,107,.35)}
+
 /* ---------- Handy ---------- */
 @media (max-width:999px){
   .bar{padding:10px 16px;gap:10px}
@@ -635,6 +649,20 @@ details summary{cursor:pointer}
     </details>
     <h3 style="font-weight:600;font-size:15px;margin:26px 0 8px">Zuletzt gesendet</h3>
     <div id="lk_hist" class="ulist"></div>
+  </div>
+</div>
+
+
+<div class="dlgscrim" id="dlg" hidden>
+  <div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dlg_t">
+    <div class="badge4k">4K</div>
+    <h2 id="dlg_t"></h2>
+    <div class="dname" id="dlg_name"></div>
+    <p id="dlg_text"></p>
+    <div class="acts">
+      <button class="btn primary" type="button" id="dlg_ok"></button>
+      <button class="btn" type="button" id="dlg_no"></button>
+    </div>
   </div>
 </div>
 
@@ -1046,13 +1074,17 @@ $("#linksbtn").onclick = () => openLinks();
 $("#lk_text").oninput = countLinks;
 $("#lk_send").onclick = async () => {
   if (protectorLinks($("#lk_text").value).length && !confirm("Darunter sind Links zu Schutzseiten (z. B. filecrypt). Die bleiben im JDownloader meist mit „Captcha unsupported“ hängen. Trotzdem senden?")) return;
+  if (UHD_RE.test($("#lk_text").value + " " + $("#lk_pkg").value) && !await askDialog({
+      title: "4K-Film senden?", name: $("#lk_pkg").value || ($("#lk_text").value.match(linkRe) || [""])[0].split("/").pop(),
+      text: "Das sieht nach einem Film in 2160p (4K) aus. 4K-Filme brauchen sehr viel Platz. Ist das so gewollt?",
+      ok: "Ja, trotzdem senden", no: "Abbrechen"})) return;
   const b = $("#lk_send"); b.disabled = true;
   try {
     const r = await api("/api/links", {method: "POST", body: {text: $("#lk_text").value, package: $("#lk_pkg").value}});
     toast(`${r.count} ${r.count === 1 ? "Link" : "Links"} an JDownloader gesendet${r.cleaned ? ` · hängendes Paket „${r.cleaned}“ entfernt` : ""}`);
     $("#lk_text").value = ""; $("#lk_pkg").value = ""; countLinks();
     closeLinks();
-    if (jdLive) setTimeout(() => openJd("grabber"), 350);
+    if (jdLive) { setTimeout(() => openJd("grabber"), 350); setTimeout(checkUhd, 6000); setTimeout(checkUhd, 20000); }
   } catch (e) { toast(e.message, true); }
   b.disabled = false;
 };
@@ -1066,6 +1098,48 @@ window.addEventListener("popstate", () => closeLinks(true));
 $("#lk_close").onclick = () => closeLinks();
 $("#lk_x").onclick = () => closeLinks();
 $("#linkscrim").onclick = e => { if (e.target === $("#linkscrim")) closeLinks(); };
+
+
+/* 4K-Warnung: Filme mit 2160p sind riesig, deshalb nachfragen */
+const UHD_RE = /(2160p|(^|[^a-z0-9])(4k|uhd)([^a-z0-9]|$))/i;
+function askDialog({title, name, text, ok, no, danger}) {
+  return new Promise(resolve => {
+    $("#dlg_t").textContent = title; $("#dlg_name").textContent = name || ""; $("#dlg_name").hidden = !name;
+    $("#dlg_text").textContent = text;
+    $("#dlg_ok").textContent = ok; $("#dlg_no").textContent = no;
+    $("#dlg_no").className = "btn" + (danger ? " danger" : " ghost");
+    $("#dlg").hidden = false;
+    const done = v => { $("#dlg").hidden = true; resolve(v); };
+    $("#dlg_ok").onclick = () => done(true);
+    $("#dlg_no").onclick = () => done(false);
+  });
+}
+let uhdBusy = false;
+const uhdAsked = new Set();
+async function checkUhd() {
+  if (uhdBusy || !jdLive || !me || !me.can_links || document.hidden) return;
+  uhdBusy = true;
+  try {
+    const key = p => p.uuid + "|" + p.name;
+    const list = (await api("/api/jd/uhd")).filter(p => !uhdAsked.has(key(p)));
+    for (const p of list) {
+      uhdAsked.add(key(p));
+      const where = p.kind === "grabber" ? "im Linksammler" : "in der Downloadliste";
+      const keep = await askDialog({
+        title: "4K-Film im JDownloader", name: p.name,
+        text: `Dieser Film ist in 2160p (4K) ${where}${p.bytes ? ` und ca. ${fmtSize(p.bytes)} groß` : ""}. 4K-Filme brauchen sehr viel Platz. Ist das so gewollt?`,
+        ok: "Ja, so gewollt", no: "Löschen", danger: true});
+      try {
+        if (keep) { await api("/api/jd/uhd/ok", {method: "POST", body: {uuid: p.uuid, name: p.name}}); toast("Behalten"); }
+        else { await api("/api/jd/remove", {method: "POST", body: {kind: p.kind, packages: [p.uuid], name: p.name}}); toast(`„${p.name}“ gelöscht`); }
+      } catch (e) { toast(e.message, true); uhdAsked.delete(key(p)); }
+      if (!$("#jdscrim").hidden) refreshJd();
+    }
+  } catch (e) { /* JDownloader gerade nicht erreichbar: beim nächsten Mal */ }
+  uhdBusy = false;
+}
+setInterval(checkUhd, 30000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) checkUhd(); });
 
 /* JDownloader live */
 let jdTimer = null, jdTab = "downloads", jdLast = null;
@@ -1418,7 +1492,7 @@ let started = false;
 async function start(user) {
   me = user; renderMe();
   $("#linksbtn").hidden = !me.can_links;
-  if (me.can_links) api("/api/links").then(r => { jdLive = !!r.live; $("#jdbtn").hidden = !jdLive; }).catch(() => {});
+  if (me.can_links) api("/api/links").then(r => { jdLive = !!r.live; $("#jdbtn").hidden = !jdLive; checkUhd(); }).catch(() => {});
   // Über "Teilen → Mediasort" (Android) geöffnet: Links direkt ins Fenster übernehmen
   if (location.pathname === "/cnl") handleCnl();
   else if (location.pathname === "/share") {
