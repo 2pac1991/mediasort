@@ -9,7 +9,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import config, db, files, library, links, myjd, rbrowser, renamer, service, tmdb, users
+from . import adblock, config, db, files, library, links, myjd, rbrowser, renamer, service, tmdb, users
 
 VERSION = "1.2.0"
 STATIC = os.path.join(os.path.dirname(__file__), "static")
@@ -28,7 +28,7 @@ STATIC_FILES = {
     "/sw.js": "text/javascript; charset=utf-8", "/offline.html": "text/html; charset=utf-8",
 }
 # Ohne Anmeldung erreichbar
-PUBLIC = {"/", "/index.html", "/share", "/cnl", "/api/health", "/api/auth/me", "/api/auth/login", "/api/auth/setup",
+PUBLIC = {"/adblock.pac", "/", "/index.html", "/share", "/cnl", "/api/health", "/api/auth/me", "/api/auth/login", "/api/auth/setup",
           "/api/auth/logout", *STATIC_FILES}
 
 
@@ -118,6 +118,11 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, f.read(), STATIC_FILES[u.path])
             if u.path == "/api/health":
                 return self._send(200, {"ok": True})
+            if u.path == "/adblock.pac":
+                # Nur für den eingebauten Browser auf demselben Rechner
+                if self.client_address[0] not in ("127.0.0.1", "::1"):
+                    return self._send(404, {"error": "Nicht gefunden"})
+                return self._send(200, adblock.pac(), "application/x-ns-proxy-autoconfig")
             if u.path == "/api/auth/me":
                 me = dict(self.me, webhook_url=users.get_webhook(self.me["name"])) if self.me else None
                 return self._send(200, {"user": me, "setup": not users.has_users()})

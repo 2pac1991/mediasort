@@ -344,7 +344,7 @@ details summary{cursor:pointer}
 .rbhint{display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:13px;color:var(--text-2);background:var(--amber-soft);border-bottom:1px solid var(--line)}
 .rbhint b{color:var(--amber)}
 .rbhint .grow{flex:1}
-.rbpop{padding:7px 14px;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.rbpop{position:absolute;left:10px;right:10px;bottom:10px;z-index:2;padding:6px 6px 6px 14px;font-size:12.5px;color:var(--text-2);background:rgba(19,25,34,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line-2);border-radius:14px;box-shadow:var(--shadow-lg);display:flex;gap:8px;align-items:center;cursor:default}
 .rbpop span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rbstage{flex:1;min-height:0;position:relative;overflow:hidden;background:#fff;touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}
 .rbstage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:top center;pointer-events:none;-webkit-user-drag:none}
@@ -690,8 +690,7 @@ details summary{cursor:pointer}
   <div class="rbmarks" id="rb_marks"></div>
   <div class="rbprog" id="rb_prog"></div>
   <div class="rbhint"><span class="grow">Captcha lösen, dann auf der Seite <b>Click'n'Load</b> tippen.</span><button class="btn small" type="button" id="rb_grab">Links übernehmen</button></div>
-  <div class="rbpop" id="rb_pop" hidden><span id="rb_popurl"></span><button class="btn ghost small" type="button" id="rb_popgo">Öffnen</button></div>
-  <div class="rbstage" id="rb_stage"><img id="rb_img" alt=""><div class="rbwait" id="rb_wait"><i></i><span>Seite wird geladen …</span></div><div class="rbstart" id="rb_start" hidden></div></div>
+  <div class="rbstage" id="rb_stage"><img id="rb_img" alt=""><div class="rbwait" id="rb_wait"><i></i><span>Seite wird geladen …</span></div><div class="rbstart" id="rb_start" hidden></div><div class="rbpop" id="rb_pop" hidden><span id="rb_popurl"></span><button class="btn ghost small" type="button" id="rb_popgo">Trotzdem öffnen</button></div></div>
   <form class="rbkeys" id="rb_keys" autocomplete="off">
     <input type="text" id="rb_text" placeholder="Text ins angetippte Feld schreiben" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send">
     <button class="btn" type="submit">Eintippen</button>
@@ -1131,7 +1130,7 @@ $("#linkscrim").onclick = e => { if (e.target === $("#linkscrim")) closeLinks();
 
 
 /* Eingebauter Browser: Chromium auf dem Server, hier nur Bild und Eingaben */
-let rbOn = false, rbGen = 0, rbSeq = 0, rbSize = {w: 390, h: 700}, rbThen = null, rbPopEv = null, rbUrl = "", rbPopup = "";
+let rbPopT = null, rbOn = false, rbGen = 0, rbSeq = 0, rbSize = {w: 390, h: 700}, rbThen = null, rbPopEv = null, rbUrl = "", rbPopup = "";
 const rbMobile = () => matchMedia("(pointer:coarse)").matches || innerWidth < 700;
 function rbDims() {
   const st = $("#rb_stage");
@@ -1177,9 +1176,14 @@ async function rbLoop(gen) {
       rbUrl = r.url || rbUrl;
       if (rbUrl && !/^about:/.test(rbUrl)) $("#rb_host").textContent = rbUrl.replace(/^https?:\/\//, "").split(/[/?#]/)[0];
       $("#rb_prog").classList.toggle("on", !!r.loading);
-      rbPopup = (r.popups || []).slice(-1)[0] || "";
-      $("#rb_pop").hidden = !rbPopup;
-      $("#rb_popurl").textContent = rbPopup ? "Popup blockiert: " + rbPopup.replace(/^https?:\/\//, "") : "";
+      // Neues blockiertes Popup kurz einblenden
+      const pop = (r.popups || []).slice(-1)[0] || "";
+      if (pop && pop !== rbPopup) {
+        rbPopup = pop;
+        $("#rb_popurl").textContent = "🛡 Werbung blockiert: " + pop.replace(/^https?:\/\//, "").split(/[/?#]/)[0];
+        $("#rb_pop").hidden = false;
+        clearTimeout(rbPopT); rbPopT = setTimeout(() => { $("#rb_pop").hidden = true; }, 5000);
+      }
       if (r.error) toast(r.error, true);
       if (r.cnl) { rbFound(r.cnl); break; }
     } catch (e) {
@@ -1222,7 +1226,7 @@ function rbPoint(e) {
   let down = null, acc = 0, last = 0, tail = null;
   // Scrollen gebündelt senden; der Rest einer schnellen Bewegung folgt kurz danach
   const flush = (p) => { clearTimeout(tail); if (Math.abs(acc) < 1) return; rbSendInput({type: "scroll", x: p.x, y: p.y, dy: acc}); acc = 0; last = Date.now(); };
-  st.addEventListener("pointerdown", e => { down = {x: e.clientX, y: e.clientY, ly: e.clientY, moved: false}; st.setPointerCapture(e.pointerId); });
+  st.addEventListener("pointerdown", e => { if (!rbOn || e.target.closest(".rbpop, .rbstart")) return; down = {x: e.clientX, y: e.clientY, ly: e.clientY, moved: false}; st.setPointerCapture(e.pointerId); });
   st.addEventListener("pointermove", e => {
     if (!down) return;
     if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) down.moved = true;
@@ -1245,7 +1249,7 @@ function rbPoint(e) {
     down = null;
   });
   st.addEventListener("pointercancel", () => { down = null; acc = 0; });
-  st.addEventListener("wheel", e => { e.preventDefault(); const p = rbPoint(e); acc += e.deltaY; if (Date.now() - last > 50) flush(p); else { clearTimeout(tail); tail = setTimeout(() => flush(p), 60); } }, {passive: false});
+  st.addEventListener("wheel", e => { if (!rbOn) return; e.preventDefault(); const p = rbPoint(e); acc += e.deltaY; if (Date.now() - last > 50) flush(p); else { clearTimeout(tail); tail = setTimeout(() => flush(p), 60); } }, {passive: false});
 })();
 $("#rb_keys").onsubmit = async e => {
   e.preventDefault();

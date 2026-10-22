@@ -82,5 +82,5 @@ Manche Browser (z. B. Opera) führen keine Lesezeichen mit JavaScript aus. Dafü
 - Die Seite läuft in einem Chromium auf dem Server und wird als Live-Bild angezeigt. Tippen, Wischen zum Scrollen und Texteingabe (Feld unten) werden weitergegeben.
 - Das Captcha löst ihr selbst. Danach auf der Seite **Click'n'Load** tippen: Mediasort antwortet wie ein JDownloader auf Port 9666, entschlüsselt die Links und öffnet sie im Fenster **Links senden**.
 - Ohne Click'n'Load-Knopf holt **Links übernehmen** die Links direkt aus der Seite.
-- Popups (meist Werbung) werden geschlossen; ihre Adresse kann man bei Bedarf trotzdem öffnen.
+- Werbeblocker: Werbe- und Popup-Netzwerke laden gar nicht erst (eingebaute Liste plus Peter Lowe's Liste und StevenBlack hosts, wöchentlich erneuert, gespeichert in `/config/adblock-hosts.txt`). Captcha-Anbieter, filecrypt, filmfans.org und serienfans.org bleiben immer erlaubt. Popups öffnen sich nicht, Werbeflächen werden ausgeblendet, Werbe-Hinweisfenster (alert) automatisch weggeklickt.
 - Adressen im Heimnetz lassen sich nicht öffnen. Unbenutzte Fenster schließen sich nach 10 Minuten, Chromium beendet sich 5 Minuten später und braucht dann keinen Speicher mehr.

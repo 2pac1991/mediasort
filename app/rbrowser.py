@@ -17,7 +17,7 @@ import threading
 import time
 from urllib.parse import parse_qs, urlparse
 
-from . import links
+from . import adblock, links
 
 log = logging.getLogger("mediasort.browser")
 
@@ -35,6 +35,16 @@ INIT_SCRIPT = r"""(() => {
   const submit = HTMLFormElement.prototype.submit;
   HTMLFormElement.prototype.submit = function () { fix(this); return submit.call(this); };
   addEventListener("submit", e => fix(e.target), true);
+  // Werbe-Popups: kein neues Fenster, nur die Adresse melden (lässt sich bei Bedarf öffnen)
+  const fake = {closed: false, close() {}, focus() {}, blur() {}, postMessage() {}, location: {href: ""}, document: {write() {}, close() {}}};
+  window.open = function (u) { try { if (u && window.msPopup) window.msPopup(String(u)); } catch (e) {} return fake; };
+  // Werbeflächen ausblenden
+  const css = `ins.adsbygoogle,[id^="google_ads"],[id^="div-gpt-ad"],[class*="adsbox"],[class*="ad-banner"],[id*="ad-banner"],
+    [class*="advertis"],[id*="advertis"],[class*="sponsor"],[id*="sponsor"],iframe[src*="/ads/"],iframe[src*="adserver"],
+    iframe[id^="aswift"],a[href*="/aff_c?"],a[href*="/ad/click"]{display:none!important}`;
+  const add = () => { if (document.getElementById("__ms_ad")) return; const st = document.createElement("style"); st.id = "__ms_ad"; st.textContent = css; (document.head || document.documentElement).appendChild(st); };
+  if (document.documentElement) add(); else addEventListener("DOMContentLoaded", add);
+  document.addEventListener("DOMContentLoaded", add);
 })();"""
 # Fallback-Knopf "Links übernehmen": dieselbe Suche wie das Lesezeichen
 GRAB_SCRIPT = r"""(() => {
@@ -125,6 +135,7 @@ class Browser:
         import websocket  # nur nötig, wenn der Browser wirklich benutzt wird
         if not CHROME:
             raise BrowserError("Chromium ist nicht installiert")
+        adblock.refresh()
         self.datadir = tempfile.mkdtemp(prefix="mediasort-browser-")
         args = [CHROME, "--headless=new", "--no-sandbox", "--no-zygote", "--disable-gpu", "--disable-dev-shm-usage",
                 "--no-first-run", "--no-default-browser-check", "--disable-crash-reporter", "--mute-audio",
@@ -132,6 +143,9 @@ class Browser:
                 # Iframes (Captchas) im selben Prozess, damit das Abfangen von Click'n'Load überall greift
                 "--disable-features=IsolateOrigins,site-per-process,Translate,MediaRouter,"
                 "PrivateNetworkAccessSendPreflights,PrivateNetworkAccessRespectPreflightResults,LocalNetworkAccessChecks",
+                # Werbeblocker: Mediasort liefert die Proxy-Regeln, Werbe-Domains laden nie
+                f"--proxy-pac-url=http://127.0.0.1:{os.environ.get('PORT', '8484')}/adblock.pac",
+                "--disable-notifications", "--block-new-web-contents",
                 "--remote-debugging-address=127.0.0.1", "--remote-debugging-port=0",
                 f"--user-data-dir={self.datadir}", "about:blank"]
         self.proc = subprocess.Popen(args, env=dict(os.environ, HOME=self.datadir), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
@@ -235,6 +249,17 @@ class Browser:
                 t.frame = p["data"]
                 t.bump()
             return
+        if method == "Runtime.bindingCalled" and p.get("name") == "msPopup":
+            t = self._tab_by_sid(sid)
+            u = p.get("payload", "")
+            if t and re.match(r"(?i)^https?://", u) and u not in t.popups:
+                t.popups = (t.popups + [u])[-3:]
+                t.bump()
+            return
+        if method == "Page.javascriptDialogOpening":
+            # alert/confirm von Werbeskripten würden die Seite blockieren: sofort wegklicken
+            self.fire("Page.handleJavaScriptDialog", {"accept": p.get("type") != "confirm"}, sid)
+            return
         if method in ("Page.frameAttached", "Page.frameNavigated"):
             t = self._tab_by_sid(sid)
             if t:
@@ -333,6 +358,8 @@ class Browser:
                 t.frames.add(t.target)
                 self.tabs[user] = t
                 self.call("Page.enable", None, t.sid)
+                self.call("Runtime.addBinding", {"name": "msPopup"}, t.sid)
+                self.call("Runtime.enable", None, t.sid)
                 self.call("Page.addScriptToEvaluateOnNewDocument", {"source": INIT_SCRIPT}, t.sid)
                 ua = self._ua(mobile)
                 self.call("Emulation.setUserAgentOverride", {
