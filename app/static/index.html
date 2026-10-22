@@ -328,6 +328,16 @@ details summary{cursor:pointer}
 .rbaddr span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rbaddr svg{width:14px;height:14px;flex:none;color:var(--ok)}
 .rbaddr input{flex:1;min-width:0;background:transparent;border:0;padding:0;font-size:16px;color:var(--text);outline:none}
+.rbmarks{display:flex;gap:6px;padding:7px 10px;background:var(--surface);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.rbmarks::-webkit-scrollbar{display:none}
+.rbmarks button{flex:none;display:flex;align-items:center;gap:7px;height:32px;padding:0 12px 0 6px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.rbmarks button i{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:11px;font-weight:800;color:#fff}
+.rbstart{position:absolute;inset:0;background:var(--bg);display:grid;align-content:start;gap:12px;padding:28px 18px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.rbstart h3{grid-column:1/-1;margin:0 0 4px;font-size:15px;color:var(--muted);font-weight:600}
+.rbstart button{display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:16px;border-radius:var(--r-lg);border:1px solid var(--line-2);background:var(--surface);color:var(--text);font:inherit;text-align:left;cursor:pointer}
+.rbstart button i{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-style:normal;font-weight:800;color:#fff;font-size:15px}
+.rbstart button b{font-size:15px}
+.rbstart button small{color:var(--muted);font-size:12.5px;margin-top:-8px}
 .rbprog{height:2px;background:linear-gradient(90deg,transparent,var(--amber),transparent);background-size:50% 100%;background-repeat:no-repeat;animation:rbprog 1s linear infinite;opacity:0;transition:opacity .2s}
 .rbprog.on{opacity:1}
 @keyframes rbprog{from{background-position:-50% 0}to{background-position:150% 0}}
@@ -417,6 +427,7 @@ details summary{cursor:pointer}
       <button class="btn ghost" id="rescan" title="Alle offenen Dateien neu bei TMDB abfragen">Neu erkennen</button>
       <button class="btn" id="linksbtn" type="button" hidden>＋ Links senden</button>
       <button class="btn ghost" id="jdbtn" type="button" hidden>📥 JDownloader</button>
+      <button class="btn ghost" id="rbbtn" type="button" hidden>🌐 Browser</button>
       <span class="grow"></span>
       <div class="filters" id="filters"></div>
     </div>
@@ -676,10 +687,11 @@ details summary{cursor:pointer}
     <div class="rbaddr" id="rb_addr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span id="rb_host">…</span></div>
     <button class="ib" type="button" id="rb_reload" aria-label="Neu laden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg></button>
   </div>
+  <div class="rbmarks" id="rb_marks"></div>
   <div class="rbprog" id="rb_prog"></div>
   <div class="rbhint"><span class="grow">Captcha lösen, dann auf der Seite <b>Click'n'Load</b> tippen.</span><button class="btn small" type="button" id="rb_grab">Links übernehmen</button></div>
   <div class="rbpop" id="rb_pop" hidden><span id="rb_popurl"></span><button class="btn ghost small" type="button" id="rb_popgo">Öffnen</button></div>
-  <div class="rbstage" id="rb_stage"><img id="rb_img" alt=""><div class="rbwait" id="rb_wait"><i></i><span>Seite wird geladen …</span></div></div>
+  <div class="rbstage" id="rb_stage"><img id="rb_img" alt=""><div class="rbwait" id="rb_wait"><i></i><span>Seite wird geladen …</span></div><div class="rbstart" id="rb_start" hidden></div></div>
   <form class="rbkeys" id="rb_keys" autocomplete="off">
     <input type="text" id="rb_text" placeholder="Text ins angetippte Feld schreiben" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send">
     <button class="btn" type="submit">Eintippen</button>
@@ -1058,7 +1070,7 @@ async function loadLinkHist() {
   try {
     const r = await api("/api/links");
     jdLive = !!r.live; $("#jdbtn").hidden = !jdLive;
-    rbAvail = !!r.browser; $("#lk_web").hidden = !rbAvail; countLinks();
+    rbAvail = !!r.browser; $("#lk_web").hidden = !rbAvail; $("#rbbtn").hidden = !rbAvail; countLinks();
     $("#lk_hist").innerHTML = r.items.length ? r.items.map(l => `<div class="urow" style="display:block">
         <b>${esc(l.package || (l.urls[0] || "").replace(/^https?:\/\//, "").slice(0, 60))}</b>
         <div class="hint" style="color:var(--muted);font-size:12px;margin-top:2px">${l.count} ${l.count === 1 ? "Link" : "Links"} · ${esc(l.user)} · ${fmtDate(l.ts)}</div></div>`).join("")
@@ -1125,12 +1137,29 @@ function rbDims() {
   const st = $("#rb_stage");
   return {width: Math.round(st.clientWidth), height: Math.round(st.clientHeight), mobile: rbMobile()};
 }
+// Lesezeichen oben im Browser
+const RB_MARKS = [
+  {name: "filmfans.org", url: "https://filmfans.org/", sub: "Filme", color: "#e8902a"},
+  {name: "serienfans.org", url: "https://serienfans.org/", sub: "Serien", color: "#3b82f6"},
+];
+$("#rb_marks").innerHTML = RB_MARKS.map((m, i) => `<button type="button" data-mark="${i}"><i style="background:${m.color}">${m.name[0].toUpperCase()}</i>${esc(m.name)}</button>`).join("");
+$("#rb_start").innerHTML = `<h3>Lesezeichen</h3>` + RB_MARKS.map((m, i) => `<button type="button" data-mark="${i}"><i style="background:${m.color}">${m.name[0].toUpperCase()}</i><b>${esc(m.name)}</b><small>${esc(m.sub)}</small></button>`).join("");
+document.querySelectorAll("#rb [data-mark]").forEach(b => b.onclick = () => {
+  const url = RB_MARKS[b.dataset.mark].url;
+  if (rbOn) { $("#rb_start").hidden = true; api("/api/rb/nav", {method: "POST", body: {action: "go", url}}).catch(e => toast(e.message, true)); }
+  else openRb(url);
+});
 async function openRb(url) {
-  if (!url) return;
-  $("#rb_img").removeAttribute("src"); $("#rb_wait").hidden = false; $("#rb_pop").hidden = true;
-  $("#rb_host").textContent = url.replace(/^https?:\/\//, "").split("/")[0];
   if ($("#rb").hidden) history.pushState({sheet: "rb"}, "");
   $("#rb").hidden = false;
+  $("#rb_start").hidden = !!url;
+  if (!url) {
+    // Ohne Adresse: Startseite mit Lesezeichen, Chromium startet erst beim Antippen
+    $("#rb_wait").hidden = true; $("#rb_img").removeAttribute("src"); $("#rb_host").textContent = "Startseite"; $("#rb_pop").hidden = true;
+    return;
+  }
+  $("#rb_img").removeAttribute("src"); $("#rb_wait").hidden = false; $("#rb_pop").hidden = true;
+  $("#rb_host").textContent = url.replace(/^https?:\/\//, "").split("/")[0];
   try {
     const d = rbDims();
     await api("/api/rb/open", {method: "POST", body: {url, ...d}});
@@ -1232,7 +1261,10 @@ $("#rb_reload").onclick = () => api("/api/rb/nav", {method: "POST", body: {actio
 $("#rb_popgo").onclick = () => rbPopup && api("/api/rb/nav", {method: "POST", body: {action: "go", url: rbPopup}}).catch(e => toast(e.message, true));
 $("#rb_addr").onclick = () => {
   const u = prompt("Adresse öffnen", rbUrl);
-  if (u && u.trim()) api("/api/rb/nav", {method: "POST", body: {action: "go", url: u.trim()}}).catch(e => toast(e.message, true));
+  if (!u || !u.trim()) return;
+  if (!rbOn) return openRb(u.trim());
+  $("#rb_start").hidden = true;
+  api("/api/rb/nav", {method: "POST", body: {action: "go", url: u.trim()}}).catch(e => toast(e.message, true));
 };
 $("#rb_grab").onclick = async () => {
   const b = $("#rb_grab"); b.disabled = true;
@@ -1253,9 +1285,9 @@ addEventListener("resize", () => {
 });
 $("#lk_web").onclick = () => {
   const text = $("#lk_text").value, prot = protectorLinks(text), all = text.match(linkRe) || [];
-  const url = prot[0] || all[0] || prompt("Welche Seite öffnen? (z. B. filecrypt-Link)", "");
-  if (url && url.trim()) openRb(url.trim());
+  openRb((prot[0] || all[0] || "").trim());
 };
+$("#rbbtn").onclick = () => openRb("");
 
 /* JDownloader live */
 let jdTimer = null, jdTab = "downloads", jdLast = null;
@@ -1609,7 +1641,7 @@ let started = false;
 async function start(user) {
   me = user; renderMe();
   $("#linksbtn").hidden = !me.can_links;
-  if (me.can_links) api("/api/links").then(r => { jdLive = !!r.live; $("#jdbtn").hidden = !jdLive; rbAvail = !!r.browser; }).catch(() => {});
+  if (me.can_links) api("/api/links").then(r => { jdLive = !!r.live; $("#jdbtn").hidden = !jdLive; rbAvail = !!r.browser; $("#rbbtn").hidden = !rbAvail; }).catch(() => {});
   // Über "Teilen → Mediasort" (Android) geöffnet: Links direkt ins Fenster übernehmen
   if (location.pathname === "/cnl") handleCnl();
   else if (location.pathname === "/share") {
