@@ -1,2 +1,7 @@
 __pycache__/
 *.pyc
+app/static/mediasort.apk
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties

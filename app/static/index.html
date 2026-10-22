@@ -739,11 +739,13 @@ function renderMe() {
       <div class="who"><b>${esc(me.name)}</b><span>${me.role === "admin" ? "Administrator" : "Nutzer"}</span></div>
       <button type="button" role="menuitem" id="hookbtn">🔔&nbsp; Benachrichtigung</button>
       <button type="button" role="menuitem" id="pwbtn">🔑&nbsp; Passwort ändern</button>
+      ${/Android/i.test(navigator.userAgent) && !/MediasortApp/.test(navigator.userAgent) ? `<button type="button" role="menuitem" id="apkbtn">📱&nbsp; Android-App laden</button>` : ""}
       <button type="button" role="menuitem" id="logout" class="danger">↩&nbsp; Abmelden</button>
     </div>`;
   const menu = $("#menu");
   $("#avatar").onclick = e => { e.stopPropagation(); menu.hidden = !menu.hidden; };
   document.addEventListener("click", e => { if (!e.target.closest("#me")) menu.hidden = true; });
+  if ($("#apkbtn")) $("#apkbtn").onclick = () => { location.href = "/mediasort.apk"; };
   $("#logout").onclick = async () => { await api("/api/auth/logout", {method: "POST"}); location.reload(); };
   $("#hookbtn").onclick = () => { menu.hidden = true; openHook(); };
   $("#pwbtn").onclick = async () => {

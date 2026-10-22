@@ -118,6 +118,13 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, f.read(), STATIC_FILES[u.path])
             if u.path == "/api/health":
                 return self._send(200, {"ok": True})
+            if u.path == "/mediasort.apk":
+                # Android-App, beim Bauen des Docker-Images mit hineingelegt
+                apk = os.path.join(STATIC, "mediasort.apk")
+                if not os.path.exists(apk):
+                    return self._send(404, {"error": "Die Android-App ist in diesem Image nicht enthalten"})
+                with open(apk, "rb") as f:
+                    return self._send(200, f.read(), "application/vnd.android.package-archive")
             if u.path == "/api/auth/me":
                 me = dict(self.me, webhook_url=users.get_webhook(self.me["name"])) if self.me else None
                 return self._send(200, {"user": me, "setup": not users.has_users()})
