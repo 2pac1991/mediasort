@@ -121,6 +121,7 @@ def apply(item, settings, companions=()):
                 if os.path.lexists(path):
                     files.trash_path(path, "Mediasort")
             _remove_empty_dirs(src, settings.get("input_dirs") or [])
+            files.cleanup_package(src, settings)
             return True, "Schon in der Mediathek, Download in den Papierkorb verschoben", None
         if os.path.samefile(src, dst):
             return True, "Ziel ist bereits verlinkt", None
@@ -144,8 +145,9 @@ def apply(item, settings, companions=()):
             except OSError:
                 pass
     if used == "move":
-        # Leere Paketordner im Download-Ordner aufräumen (der Download-Ordner selbst bleibt)
+        # Paketordner im Download-Ordner aufräumen: leer -> löschen, nur noch Reste -> in den Papierkorb
         _remove_empty_dirs(src, settings.get("input_dirs") or [])
+        files.cleanup_package(src, settings)
     parsed, info = item.get("parsed") or {}, item.get("match") or {}
     kind = "movie" if info.get("type") == "movie" else ("anime" if parsed.get("anime") or info.get("is_anime") else "series")
     hid = db.add_history(used, src, dst, kind, info.get("title"), extras)

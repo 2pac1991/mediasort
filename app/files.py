@@ -164,3 +164,81 @@ def purge_expired():
     for t in db.list_trash():
         if t["ts"] < cutoff:
             purge(t["id"])
+
+
+INCOMPLETE = (".part", ".!qb", ".crdownload", ".tmp", ".mediasort-part", ".partial")
+
+
+def _package_dir(path, input_dirs):
+    """Der Paketordner direkt unterhalb eines Download-Ordners, in dem path liegt (oder None)."""
+    full = os.path.abspath(path)
+    for root in input_dirs or []:
+        root = os.path.abspath(root)
+        rel = os.path.relpath(full, root)
+        if rel.startswith("..") or rel == ".":
+            continue
+        top = rel.split(os.sep)[0]
+        if os.sep in rel and not top.startswith("."):
+            return os.path.join(root, top)
+    return None
+
+
+def _is_finished_leftover(folder, min_size):
+    """True, wenn im Ordner kein Video mehr liegt und nichts mehr geladen wird (nur noch Reste)."""
+    for dp, dirnames, fns in os.walk(folder):
+        for fn in fns:
+            low = fn.lower()
+            if low.endswith(INCOMPLETE):
+                return False
+            # Jedes Video außer Samples schützt den Ordner, auch kleine (sonst wären kurze Folgen weg)
+            if os.path.splitext(low)[1] in VIDEO_EXT and "sample" not in low and "sample" not in dp.lower():
+                return False
+    return True
+
+
+def _newest_mtime(folder):
+    newest = os.path.getmtime(folder)
+    for dp, _, fns in os.walk(folder):
+        for fn in fns:
+            try:
+                newest = max(newest, os.path.getmtime(os.path.join(dp, fn)))
+            except OSError:
+                pass
+    return newest
+
+
+def cleanup_package(path, settings):
+    """Nach dem Einsortieren: den Paketordner der Datei samt Resten (nfo, txt, rar ...) in den Papierkorb,
+    sobald dort kein weiteres Video mehr liegt und nichts mehr lädt. Gibt den Ordner zurück, wenn aufgeräumt."""
+    if not settings.get("cleanup_downloads", True):
+        return None
+    folder = _package_dir(path, settings.get("input_dirs"))
+    if not folder or not os.path.isdir(folder):
+        return None
+    if not _is_finished_leftover(folder, int(settings.get("min_size_mb") or 0) * 1024 * 1024):
+        return None
+    trash_path(folder, "Mediasort")
+    return folder
+
+
+def cleanup_stale(settings, min_age=1800):
+    """Regelmäßig: alte Reste-Ordner im Download-Ordner aufräumen (ohne Video, seit min_age unverändert)."""
+    if not settings.get("cleanup_downloads", True):
+        return []
+    min_size = int(settings.get("min_size_mb") or 0) * 1024 * 1024
+    done = []
+    for root in settings.get("input_dirs") or []:
+        if not os.path.isdir(root):
+            continue
+        for entry in os.scandir(root):
+            if entry.name.startswith(".") or not entry.is_dir(follow_symlinks=False):
+                continue
+            try:
+                if time.time() - _newest_mtime(entry.path) < min_age:
+                    continue
+                if _is_finished_leftover(entry.path, min_size):
+                    trash_path(entry.path, "Mediasort")
+                    done.append(entry.name)
+            except OSError:
+                continue
+    return done

@@ -34,6 +34,8 @@ DEFAULTS = {
     # Papierkorb für gelöschte Dateien (muss auf demselben Mount wie die Mediathek liegen)
     "trash_dir": "/data/.mediasort-papierkorb",
     "trash_days": 14,
+    # Nach dem Einsortieren Paketordner samt Resten (nfo, txt, rar ...) aus dem Download-Ordner entfernen
+    "cleanup_downloads": True,
     # Ordner, den JDownloader mit der Erweiterung "Folder Watch" überwacht (Auftragsdateien .crawljob)
     "jd_watch_dir": "",
     # Alternativ direkt über My.JDownloader (wie die Handy-Apps)

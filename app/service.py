@@ -216,8 +216,17 @@ def watch_loop(stop_event):
     """Watch-Ordner: neue Dateien erkennen, sobald sie fertig geschrieben sind, sichere Treffer automatisch einsortieren."""
     sizes = {}
     last_purge = 0
+    last_cleanup = 0
     last_dedupe = 0
     while not stop_event.is_set():
+        if time.time() - last_cleanup > 600:
+            last_cleanup = time.time()
+            try:
+                cleaned = files.cleanup_stale(config.get())
+                if cleaned:
+                    log.info("Reste im Download-Ordner aufgeräumt: %s", ", ".join(cleaned))
+            except Exception:  # noqa: BLE001
+                log.exception("Aufräumen des Download-Ordners fehlgeschlagen")
         if time.time() - last_purge > 3600:
             last_purge = time.time()
             try:
