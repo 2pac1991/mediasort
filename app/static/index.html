@@ -644,6 +644,7 @@ details summary{cursor:pointer}
       <summary style="cursor:pointer;font-weight:600">Click'n'Load am Handy einrichten</summary>
       <p class="hint" style="color:var(--muted)">Einmalig ein Lesezeichen anlegen. Danach auf jeder Seite mit Click'n'Load-Knopf das Lesezeichen antippen, Mediasort öffnet sich mit den Links.</p>
       <div class="inline"><input type="text" id="cnlcode" readonly><button class="btn small" type="button" id="cnlcopy">Code kopieren</button></div>
+      <p class="hint" style="color:var(--muted);margin-top:10px"><b>Android-App:</b> Mit der Mediasort-App (Konto-Menü → „Android-App laden“) braucht ihr kein Lesezeichen: Die App empfängt Click'n'Load wie der JDownloader am PC. Einfach im Browser auf der Download-Seite auf <b>Click'n'Load</b> tippen.</p>
       <p class="hint" style="color:var(--muted);margin-top:10px"><b>iPhone (Safari):</b> 1. Diese Seite als Lesezeichen sichern (Teilen → Lesezeichen hinzufügen), Name <b>Mediasort CNL</b>. 2. Lesezeichen öffnen → Bearbeiten → das Lesezeichen antippen und die Adresse durch den kopierten Code ersetzen. 3. Auf einer Download-Seite: Lesezeichen → <b>Mediasort CNL</b>.</p>
       <p class="hint" style="color:var(--muted)"><b>Android (Chrome):</b> 1. Menü ⋮ → ☆ (Lesezeichen), dann Bearbeiten: Name <b>Mediasort CNL</b>, als URL den kopierten Code einfügen. 2. Auf einer Download-Seite in die Adressleiste <b>Mediasort CNL</b> tippen und den Lesezeichen-Vorschlag antippen.</p>
     </details>
@@ -1494,7 +1495,12 @@ let started = false;
 async function start(user) {
   me = user; renderMe();
   $("#linksbtn").hidden = !me.can_links;
-  if (me.can_links) api("/api/links").then(r => { jdLive = !!r.live; $("#jdbtn").hidden = !jdLive; checkUhd(); }).catch(() => {});
+  if (me.can_links) api("/api/links").then(r => {
+    jdLive = !!r.live; $("#jdbtn").hidden = !jdLive; checkUhd();
+    // Aus einer Benachrichtigung der Android-App: gleich das JDownloader-Fenster zeigen
+    const jdq = new URLSearchParams(location.search).get("jd");
+    if (jdq) { history.replaceState(null, "", "/"); if (jdLive) openJd(jdq === "downloads" ? "downloads" : "grabber"); }
+  }).catch(() => {});
   // Über "Teilen → Mediasort" (Android) geöffnet: Links direkt ins Fenster übernehmen
   if (location.pathname === "/cnl") handleCnl();
   else if (location.pathname === "/share") {

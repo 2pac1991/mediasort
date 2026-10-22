@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId 'de.mediasort.app'
-        minSdk 24
+        minSdk 26
         targetSdk 34
         versionCode((System.getenv('VERSION_CODE') ?: '1') as Integer)
         versionName '1.0.' + (System.getenv('VERSION_CODE') ?: '0')

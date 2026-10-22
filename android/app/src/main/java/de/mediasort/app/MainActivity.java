@@ -8,7 +8,9 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.content.pm.PackageManager;
 import android.text.InputType;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -65,6 +67,12 @@ public class MainActivity extends Activity {
 
         if (state != null) web.restoreState(state);
         else handleIntent(getIntent());
+
+        // Echtes Click'n'Load: Hintergrunddienst auf Port 9666 (Hinweis-Benachrichtigung braucht ab Android 13 die Erlaubnis)
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1);
+        }
+        CnlService.start(this);
     }
 
     @Override
@@ -94,15 +102,21 @@ public class MainActivity extends Activity {
         else super.onBackPressed();
     }
 
-    private String base() {
-        String u = prefs.getString("url", DEFAULT_URL).trim();
+    static String baseUrl(android.content.Context ctx) {
+        String u = ctx.getSharedPreferences("mediasort", MODE_PRIVATE).getString("url", DEFAULT_URL).trim();
         while (u.endsWith("/")) u = u.substring(0, u.length() - 1);
         return u;
+    }
+
+    private String base() {
+        return baseUrl(this);
     }
 
     /** Geteilte Links landen direkt im Fenster "Links senden". */
     private void handleIntent(Intent intent) {
         String url = base() + "/";
+        String path = intent != null ? intent.getStringExtra("path") : null;
+        if (path != null && path.startsWith("/")) url = base() + path; // aus einer Benachrichtigung
         if (intent != null && Intent.ACTION_SEND.equals(intent.getAction())) {
             String text = intent.getStringExtra(Intent.EXTRA_TEXT);
             String subject = intent.getStringExtra(Intent.EXTRA_SUBJECT);
