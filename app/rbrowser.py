@@ -24,6 +24,7 @@ log = logging.getLogger("mediasort.browser")
 CHROME = os.environ.get("CHROMIUM") or next(
     (p for p in (shutil.which("chromium"), shutil.which("chromium-browser"), "/usr/bin/chromium", "/opt/pw-browsers/chromium")
      if p and os.path.exists(p)), "")
+XVFB = shutil.which("Xvfb")
 IDLE_TAB = 600       # Fenster ohne Benutzung wird nach 10 Minuten geschlossen
 IDLE_BROWSER = 300
 ALLOW_LOCAL = os.environ.get("BROWSER_ALLOW_LOCAL") == "1"  # nur für Tests   # Chromium beendet sich 5 Minuten nach dem letzten Fenster
@@ -122,7 +123,7 @@ class Browser:
     def __init__(self):
         self.lock = threading.RLock()
         self.send_lock = threading.Lock()
-        self.proc = self.ws = None
+        self.proc = self.ws = self.xvfb = None
         self.tabs = {}           # Benutzer -> Tab
         self.waiting = {}        # Aufruf-ID -> [Event, Antwort]
         self.next_id = 0
@@ -137,9 +138,19 @@ class Browser:
             raise BrowserError("Chromium ist nicht installiert")
         adblock.refresh()
         self.datadir = tempfile.mkdtemp(prefix="mediasort-browser-")
-        args = [CHROME, "--headless=new", "--no-sandbox", "--no-zygote", "--disable-gpu", "--disable-dev-shm-usage",
+        env = dict(os.environ, HOME=self.datadir)
+        # Ein normaler Chromium auf einem virtuellen Bildschirm (Xvfb). Ohne Xvfb notfalls unsichtbar (headless),
+        # damit kommen aber manche Sicherheitsprüfungen (z. B. Cloudflare) nicht klar.
+        mode = ["--headless=new"]
+        if XVFB:
+            display = self._start_xvfb()
+            if display:
+                env["DISPLAY"] = display
+                mode = ["--window-position=0,0", "--window-size=1400,1400", "--start-maximized"]
+        args = [CHROME, *mode, "--no-sandbox", "--no-zygote", "--disable-gpu", "--disable-dev-shm-usage",
                 "--no-first-run", "--no-default-browser-check", "--disable-crash-reporter", "--mute-audio",
-                "--disable-blink-features=AutomationControlled", "--disable-background-networking",
+                "--disable-background-networking", "--lang=de-DE", "--accept-lang=de-DE,de,en",
+                "--password-store=basic", "--disable-session-crashed-bubble",
                 # Iframes (Captchas) im selben Prozess, damit das Abfangen von Click'n'Load überall greift
                 "--disable-features=IsolateOrigins,site-per-process,Translate,MediaRouter,"
                 "PrivateNetworkAccessSendPreflights,PrivateNetworkAccessRespectPreflightResults,LocalNetworkAccessChecks",
@@ -148,7 +159,7 @@ class Browser:
                 "--disable-notifications", "--block-new-web-contents",
                 "--remote-debugging-address=127.0.0.1", "--remote-debugging-port=0",
                 f"--user-data-dir={self.datadir}", "about:blank"]
-        self.proc = subprocess.Popen(args, env=dict(os.environ, HOME=self.datadir), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        self.proc = subprocess.Popen(args, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
         url, end = None, time.time() + 30
         while time.time() < end:
             line = self.proc.stderr.readline()
@@ -169,6 +180,23 @@ class Browser:
         self.call("Fetch.enable", {"patterns": CNL_PATTERNS})
         self.call("Target.setDiscoverTargets", {"discover": True})
         log.info("Eingebauter Browser gestartet (Chromium %s)", self.version)
+
+    def _start_xvfb(self):
+        """Freie Bildschirmnummer suchen und Xvfb starten; liefert z. B. ":91" oder None."""
+        for n in range(91, 120):
+            if os.path.exists(f"/tmp/.X{n}-lock") or os.path.exists(f"/tmp/.X11-unix/X{n}"):
+                continue
+            self.xvfb = subprocess.Popen([XVFB, f":{n}", "-screen", "0", "1400x1400x24", "-nolisten", "tcp"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            for _ in range(50):
+                if os.path.exists(f"/tmp/.X11-unix/X{n}"):
+                    return f":{n}"
+                if self.xvfb.poll() is not None:
+                    break
+                time.sleep(0.1)
+            self.xvfb.kill()
+            self.xvfb = None
+        log.warning("Xvfb ließ sich nicht starten, Browser läuft unsichtbar (headless)")
+        return None
 
     def _alive(self):
         return self.proc is not None and self.proc.poll() is None and self.ws is not None
@@ -333,15 +361,10 @@ class Browser:
                                 {"name": "Access-Control-Allow-Origin", "value": "*"}]})
 
     # ---------- Fenster ----------
-    def _ua(self, mobile):
-        v = self.version or "141.0.0.0"
-        if mobile:
-            return f"Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{v} Mobile Safari/537.36"
-        return f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{v} Safari/537.36"
-
     def _metrics(self, t, mobile):
+        # Nur die Fenstergröße anpassen (wie ein schmales Browserfenster), ohne sich als Handy auszugeben
         self.call("Emulation.setDeviceMetricsOverride", {
-            "width": t.width, "height": t.height, "deviceScaleFactor": 2 if mobile else 1, "mobile": mobile}, t.sid)
+            "width": t.width, "height": t.height, "deviceScaleFactor": 2 if mobile else 1, "mobile": False}, t.sid)
 
     def open(self, user, url, width, height, mobile):
         url = check_url(url)
@@ -361,10 +384,8 @@ class Browser:
                 self.call("Runtime.addBinding", {"name": "msPopup"}, t.sid)
                 self.call("Runtime.enable", None, t.sid)
                 self.call("Page.addScriptToEvaluateOnNewDocument", {"source": INIT_SCRIPT}, t.sid)
-                ua = self._ua(mobile)
-                self.call("Emulation.setUserAgentOverride", {
-                    "userAgent": ua, "acceptLanguage": "de-DE,de;q=0.9,en;q=0.8",
-                    "platform": "Linux armv8l" if mobile else "Win32"}, t.sid)
+                # Seite gilt als sichtbar und aktiv, auch wenn mehrere Fenster offen sind
+                self.call("Emulation.setFocusEmulationEnabled", {"enabled": True}, t.sid)
             t.width, t.height = max(320, min(int(width), 1400)), max(400, min(int(height), 1400))
             t.mobile = bool(mobile)
             self._metrics(t, t.mobile)
@@ -476,6 +497,9 @@ class Browser:
             except subprocess.TimeoutExpired:
                 pass
         self.proc = None
+        if self.xvfb and self.xvfb.poll() is None:
+            self.xvfb.kill()
+        self.xvfb = None
         self.tabs.clear()
         if self.datadir:
             shutil.rmtree(self.datadir, ignore_errors=True)
