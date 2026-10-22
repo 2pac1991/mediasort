@@ -9,9 +9,9 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import config, db, files, library, links, myjd, renamer, service, tmdb, users
+from . import config, db, files, library, links, myjd, rbrowser, renamer, service, tmdb, users
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 STATIC = os.path.join(os.path.dirname(__file__), "static")
 # Früherer Einzel-Passwortschutz: wenn gesetzt, muss er beim Anlegen des ersten Admins angegeben werden
 SETUP_CODE = os.environ.get("UI_PASSWORD", "")
@@ -130,7 +130,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, files.list_dir(q.get("root", ""), q.get("path", "")))
             if u.path == "/api/links":
                 self._need(add_links=True)
-                return self._send(200, {"items": db.list_links(), "configured": links.configured(), "live": myjd.configured()})
+                return self._send(200, {"items": db.list_links(), "configured": links.configured(), "live": myjd.configured(),
+                                       "browser": rbrowser.available()})
+            if u.path == "/api/rb/poll":
+                self._need(add_links=True)
+                return self._send(200, rbrowser.BROWSER.poll(self.me["name"], int(q.get("after") or 0)))
             if u.path == "/api/jd/status":
                 self._need(add_links=True)
                 try:
@@ -279,6 +283,30 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, {"ok": True})
                 except myjd.MyJDError as e:
                     raise ValueError(str(e)) from e
+            # ---------- Eingebauter Browser ----------
+            if u.path.startswith("/api/rb/"):
+                self._need(add_links=True)
+                b, name = rbrowser.BROWSER, self.me["name"]
+                try:
+                    if u.path == "/api/rb/open":
+                        url = b.open(name, body.get("url"), body.get("width", 390), body.get("height", 700), body.get("mobile", True))
+                        log.info("%s öffnet im eingebauten Browser: %s", name, url)
+                        return self._send(200, {"ok": True, "url": url})
+                    if u.path == "/api/rb/input":
+                        b.input(name, body)
+                    elif u.path == "/api/rb/nav":
+                        b.nav(name, body.get("action"), body.get("url", ""))
+                    elif u.path == "/api/rb/resize":
+                        b.resize(name, body.get("width", 390), body.get("height", 700))
+                    elif u.path == "/api/rb/grab":
+                        return self._send(200, b.grab(name))
+                    elif u.path == "/api/rb/close":
+                        b.close(name)
+                    else:
+                        return self._send(404, {"error": "Unbekannt"})
+                    return self._send(200, {"ok": True})
+                except rbrowser.BrowserError as e:
+                    raise ValueError(f"Eingebauter Browser: {e}") from e
             if u.path == "/api/cnl/decode":
                 self._need(add_links=True)
                 if body.get("keys") and body.get("crypts"):
@@ -381,6 +409,7 @@ def main():
     db.init(os.path.join(config.CONFIG_DIR, "mediasort.db"))
     stop = threading.Event()
     threading.Thread(target=service.watch_loop, args=(stop,), daemon=True).start()
+    threading.Thread(target=rbrowser.housekeeping_loop, args=(stop,), daemon=True).start()
     port = int(os.environ.get("PORT", "8484"))
     httpd = ThreadingHTTPServer(("0.0.0.0", port), Handler)
     log.info("Mediasort %s läuft auf Port %d", VERSION, port)

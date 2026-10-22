@@ -74,3 +74,13 @@ Alternativ ohne My.JDownloader über einen überwachten Ordner:
 ## Click'n'Load am Handy
 
 Im Fenster **＋ Links senden** gibt es unter **Click'n'Load am Handy einrichten** ein Lesezeichen (Bookmarklet). Auf einer Seite mit Click'n'Load-Knopf das Lesezeichen antippen: Es liest die verschlüsselten CNL-Daten (`crypted`, `jk`) der Seite aus, Mediasort entschlüsselt sie und zeigt die Links zum Senden an. Das JavaScript aus `jk` wird dabei nie ausgeführt, nur der Schlüssel wird herausgelesen. Findet das Lesezeichen keinen Click'n'Load-Knopf, werden die Links der Seite zur Auswahl eingefügt.
+
+## Eingebauter Browser (Click'n'Load in jedem Browser)
+
+Manche Browser (z. B. Opera) führen keine Lesezeichen mit JavaScript aus. Dafür hat Mediasort einen eingebauten Browser: Im Fenster **＋ Links senden** auf **🌐 Seite im Browser öffnen** tippen (oder im JDownloader-Fenster bei einem hängenden Paket auf **🌐 Im Browser lösen**).
+
+- Die Seite läuft in einem Chromium auf dem Server und wird als Live-Bild angezeigt. Tippen, Wischen zum Scrollen und Texteingabe (Feld unten) werden weitergegeben.
+- Das Captcha löst ihr selbst. Danach auf der Seite **Click'n'Load** tippen: Mediasort antwortet wie ein JDownloader auf Port 9666, entschlüsselt die Links und öffnet sie im Fenster **Links senden**.
+- Ohne Click'n'Load-Knopf holt **Links übernehmen** die Links direkt aus der Seite.
+- Popups (meist Werbung) werden geschlossen; ihre Adresse kann man bei Bedarf trotzdem öffnen.
+- Adressen im Heimnetz lassen sich nicht öffnen. Unbenutzte Fenster schließen sich nach 10 Minuten, Chromium beendet sich 5 Minuten später und braucht dann keinen Speicher mehr.

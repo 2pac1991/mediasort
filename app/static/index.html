@@ -318,6 +318,35 @@ details summary{cursor:pointer}
   main{max-width:none;padding:8px 40px 140px 296px}
 }
 
+
+/* ---------- Eingebauter Browser ---------- */
+.rb{position:fixed;inset:0;z-index:70;background:var(--bg);display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);animation:fade .2s ease-out}
+.rbbar{display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--surface);border-bottom:1px solid var(--line)}
+.rbbar .ib{width:38px;height:38px;flex:none;border-radius:11px;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);display:grid;place-items:center;cursor:pointer;padding:0}
+.rbbar .ib svg{width:19px;height:19px}
+.rbaddr{flex:1;min-width:0;display:flex;align-items:center;gap:7px;height:38px;padding:0 12px;border-radius:11px;background:var(--bg-2);border:1px solid var(--line);color:var(--text-2);font-size:13.5px;cursor:text}
+.rbaddr span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rbaddr svg{width:14px;height:14px;flex:none;color:var(--ok)}
+.rbaddr input{flex:1;min-width:0;background:transparent;border:0;padding:0;font-size:16px;color:var(--text);outline:none}
+.rbprog{height:2px;background:linear-gradient(90deg,transparent,var(--amber),transparent);background-size:50% 100%;background-repeat:no-repeat;animation:rbprog 1s linear infinite;opacity:0;transition:opacity .2s}
+.rbprog.on{opacity:1}
+@keyframes rbprog{from{background-position:-50% 0}to{background-position:150% 0}}
+.rbhint{display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:13px;color:var(--text-2);background:var(--amber-soft);border-bottom:1px solid var(--line)}
+.rbhint b{color:var(--amber)}
+.rbhint .grow{flex:1}
+.rbpop{padding:7px 14px;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.rbpop span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rbstage{flex:1;min-height:0;position:relative;overflow:hidden;background:#fff;touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}
+.rbstage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:top center;pointer-events:none;-webkit-user-drag:none}
+.rbwait{position:absolute;inset:0;display:grid;place-items:center;background:var(--bg);color:var(--muted);font-size:14px;gap:12px;align-content:center}
+.rbwait i{width:34px;height:34px;border-radius:50%;border:3px solid var(--line-2);border-top-color:var(--amber);animation:spin .8s linear infinite;justify-self:center}
+@keyframes spin{to{transform:rotate(360deg)}}
+.rbtap{position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:rgba(245,184,61,.45);pointer-events:none;animation:rbtap .45s ease-out forwards}
+@keyframes rbtap{from{transform:scale(.3);opacity:1}to{transform:scale(1.4);opacity:0}}
+.rbkeys{display:flex;gap:6px;padding:8px 10px;background:var(--surface);border-top:1px solid var(--line)}
+.rbkeys input{flex:1;min-width:0;height:40px;padding:0 12px;font-size:16px}
+.rbkeys .btn{height:40px;padding:0 12px;flex:none}
+
 /* ---------- Handy ---------- */
 @media (max-width:999px){
   .bar{padding:10px 16px;gap:10px}
@@ -624,6 +653,7 @@ details summary{cursor:pointer}
     <input type="text" id="lk_pkg" placeholder="Leer lassen = JDownloader benennt nach Dateinamen" autocomplete="off">
     <div class="actions">
       <button class="btn primary" type="button" id="lk_send">An JDownloader senden</button>
+      <button class="btn" type="button" id="lk_web" hidden>🌐 Seite im Browser öffnen</button>
       <button class="btn ghost" type="button" id="lk_close">Schließen</button>
     </div>
     <details class="cnlhelp" style="margin-top:22px">
@@ -636,6 +666,25 @@ details summary{cursor:pointer}
     <h3 style="font-weight:600;font-size:15px;margin:26px 0 8px">Zuletzt gesendet</h3>
     <div id="lk_hist" class="ulist"></div>
   </div>
+</div>
+
+
+<div class="rb" id="rb" hidden role="dialog" aria-modal="true" aria-label="Eingebauter Browser">
+  <div class="rbbar">
+    <button class="ib" type="button" id="rb_x" aria-label="Schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    <button class="ib" type="button" id="rb_back" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <div class="rbaddr" id="rb_addr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span id="rb_host">…</span></div>
+    <button class="ib" type="button" id="rb_reload" aria-label="Neu laden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg></button>
+  </div>
+  <div class="rbprog" id="rb_prog"></div>
+  <div class="rbhint"><span class="grow">Captcha lösen, dann auf der Seite <b>Click'n'Load</b> tippen.</span><button class="btn small" type="button" id="rb_grab">Links übernehmen</button></div>
+  <div class="rbpop" id="rb_pop" hidden><span id="rb_popurl"></span><button class="btn ghost small" type="button" id="rb_popgo">Öffnen</button></div>
+  <div class="rbstage" id="rb_stage"><img id="rb_img" alt=""><div class="rbwait" id="rb_wait"><i></i><span>Seite wird geladen …</span></div></div>
+  <form class="rbkeys" id="rb_keys" autocomplete="off">
+    <input type="text" id="rb_text" placeholder="Text ins angetippte Feld schreiben" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send">
+    <button class="btn" type="submit">Eintippen</button>
+    <button class="btn ghost" type="button" id="rb_bs" aria-label="Löschen">⌫</button>
+  </form>
 </div>
 
 <div class="scrim" id="jdscrim" hidden>
@@ -1002,13 +1051,14 @@ function countLinks() {
   const n = new Set($("#lk_text").value.match(linkRe) || []).size;
   const prot = protectorLinks($("#lk_text").value);
   $("#lk_count").innerHTML = (n ? `${n} ${n === 1 ? "Link" : "Links"} erkannt` : "") + (prot.length
-    ? `<br><span style="color:var(--bad)">⚠️ ${prot.length === 1 ? "Ein Link führt" : prot.length + " Links führen"} zu einer Schutzseite. JDownloader kann deren Captcha meist nicht lösen. Besser: Seite im Browser öffnen, Captcha lösen und dann das Lesezeichen „Mediasort CNL“ antippen.</span>` : "");
+    ? `<br><span style="color:var(--bad)">⚠️ ${prot.length === 1 ? "Ein Link führt" : prot.length + " Links führen"} zu einer Schutzseite. JDownloader kann deren Captcha meist nicht lösen. Besser: ${rbAvail ? "„🌐 Seite im Browser öffnen“ antippen, Captcha lösen und auf der Seite Click'n'Load drücken." : "Seite im Browser öffnen, Captcha lösen und dann das Lesezeichen „Mediasort CNL“ antippen."}</span>` : "");
 }
-let jdLive = false;
+let jdLive = false, rbAvail = false;
 async function loadLinkHist() {
   try {
     const r = await api("/api/links");
     jdLive = !!r.live; $("#jdbtn").hidden = !jdLive;
+    rbAvail = !!r.browser; $("#lk_web").hidden = !rbAvail; countLinks();
     $("#lk_hist").innerHTML = r.items.length ? r.items.map(l => `<div class="urow" style="display:block">
         <b>${esc(l.package || (l.urls[0] || "").replace(/^https?:\/\//, "").slice(0, 60))}</b>
         <div class="hint" style="color:var(--muted);font-size:12px;margin-top:2px">${l.count} ${l.count === 1 ? "Link" : "Links"} · ${esc(l.user)} · ${fmtDate(l.ts)}</div></div>`).join("")
@@ -1062,10 +1112,150 @@ function closeLinks(fromHistory) {
   $("#linkscrim").hidden = true;
   if (!fromHistory && history.state && history.state.sheet === "links") history.back();
 }
-window.addEventListener("popstate", () => closeLinks(true));
+window.addEventListener("popstate", ev => { if (!rbEatPop(ev)) closeLinks(true); });
 $("#lk_close").onclick = () => closeLinks();
 $("#lk_x").onclick = () => closeLinks();
 $("#linkscrim").onclick = e => { if (e.target === $("#linkscrim")) closeLinks(); };
+
+
+/* Eingebauter Browser: Chromium auf dem Server, hier nur Bild und Eingaben */
+let rbOn = false, rbGen = 0, rbSeq = 0, rbSize = {w: 390, h: 700}, rbThen = null, rbPopEv = null, rbUrl = "", rbPopup = "";
+const rbMobile = () => matchMedia("(pointer:coarse)").matches || innerWidth < 700;
+function rbDims() {
+  const st = $("#rb_stage");
+  return {width: Math.round(st.clientWidth), height: Math.round(st.clientHeight), mobile: rbMobile()};
+}
+async function openRb(url) {
+  if (!url) return;
+  $("#rb_img").removeAttribute("src"); $("#rb_wait").hidden = false; $("#rb_pop").hidden = true;
+  $("#rb_host").textContent = url.replace(/^https?:\/\//, "").split("/")[0];
+  if ($("#rb").hidden) history.pushState({sheet: "rb"}, "");
+  $("#rb").hidden = false;
+  try {
+    const d = rbDims();
+    await api("/api/rb/open", {method: "POST", body: {url, ...d}});
+    rbSize = {w: d.width, h: d.height};
+    if (!rbOn) { rbOn = true; rbSeq = 0; rbLoop(++rbGen); }
+  } catch (e) { toast(e.message, true); closeRb(); }
+}
+async function rbLoop(gen) {
+  while (rbOn && gen === rbGen) {
+    try {
+      const r = await api(`/api/rb/poll?after=${rbSeq}`);
+      if (!rbOn || gen !== rbGen) break;
+      rbSeq = r.seq; rbSize = {w: r.width, h: r.height};
+      if (r.frame) { $("#rb_img").src = "data:image/jpeg;base64," + r.frame; $("#rb_wait").hidden = true; }
+      rbUrl = r.url || rbUrl;
+      if (rbUrl && !/^about:/.test(rbUrl)) $("#rb_host").textContent = rbUrl.replace(/^https?:\/\//, "").split(/[/?#]/)[0];
+      $("#rb_prog").classList.toggle("on", !!r.loading);
+      rbPopup = (r.popups || []).slice(-1)[0] || "";
+      $("#rb_pop").hidden = !rbPopup;
+      $("#rb_popurl").textContent = rbPopup ? "Popup blockiert: " + rbPopup.replace(/^https?:\/\//, "") : "";
+      if (r.error) toast(r.error, true);
+      if (r.cnl) { rbFound(r.cnl); break; }
+    } catch (e) {
+      if (!rbOn || gen !== rbGen) break;
+      toast(e.message, true); closeRb(); break;
+    }
+  }
+}
+function rbFound(found) {
+  closeRb(false, () => {
+    $("#lk_pkg").value = found.package || "";
+    openLinks(found.urls.join("\n"));
+    toast(`Click'n'Load: ${found.urls.length} ${found.urls.length === 1 ? "Link" : "Links"} übernommen`);
+  });
+}
+function closeRb(fromHistory, then) {
+  if ($("#rb").hidden) return then && then();
+  $("#rb").hidden = true; rbOn = false; $("#rb_text").value = "";
+  api("/api/rb/close", {method: "POST"}).catch(() => {});
+  if (!fromHistory && history.state && history.state.sheet === "rb") { rbThen = then || (() => {}); history.back(); }
+  else if (then) then();
+}
+// Zurück-Geste: nur den Browser schließen, die Fenster dahinter bleiben offen
+function rbEatPop(ev) {
+  if (rbPopEv === ev) return true;
+  if (!$("#rb").hidden) { rbPopEv = ev; closeRb(true); return true; }
+  if (rbThen) { rbPopEv = ev; const f = rbThen; rbThen = null; setTimeout(f); return true; }
+  return false;
+}
+const rbSendInput = ev => api("/api/rb/input", {method: "POST", body: ev}).catch(e => toast(e.message, true));
+// Position im angezeigten Bild (object-fit: contain, oben ausgerichtet) als Anteil 0..1
+function rbPoint(e) {
+  const st = $("#rb_stage").getBoundingClientRect();
+  const sc = Math.min(st.width / rbSize.w, st.height / rbSize.h);
+  const w = rbSize.w * sc, h = rbSize.h * sc, left = st.left + (st.width - w) / 2;
+  return {x: (e.clientX - left) / w, y: (e.clientY - st.top) / h, scale: sc};
+}
+(() => {
+  const st = $("#rb_stage");
+  let down = null, acc = 0, last = 0, tail = null;
+  // Scrollen gebündelt senden; der Rest einer schnellen Bewegung folgt kurz danach
+  const flush = (p) => { clearTimeout(tail); if (Math.abs(acc) < 1) return; rbSendInput({type: "scroll", x: p.x, y: p.y, dy: acc}); acc = 0; last = Date.now(); };
+  st.addEventListener("pointerdown", e => { down = {x: e.clientX, y: e.clientY, ly: e.clientY, moved: false}; st.setPointerCapture(e.pointerId); });
+  st.addEventListener("pointermove", e => {
+    if (!down) return;
+    if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) down.moved = true;
+    if (!down.moved) return;
+    const p = rbPoint(e);
+    acc += (down.ly - e.clientY) / p.scale; down.ly = e.clientY;
+    if (Date.now() - last > 70) flush(p); else { clearTimeout(tail); tail = setTimeout(() => flush(p), 80); }
+  });
+  st.addEventListener("pointerup", e => {
+    if (!down) return;
+    const p = rbPoint(e);
+    if (!down.moved) {
+      if (p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1) {
+        rbSendInput({type: "tap", x: p.x, y: p.y});
+        const dot = document.createElement("i"); dot.className = "rbtap";
+        const r = st.getBoundingClientRect(); dot.style.left = (e.clientX - r.left) + "px"; dot.style.top = (e.clientY - r.top) + "px";
+        st.appendChild(dot); setTimeout(() => dot.remove(), 500);
+      }
+    } else flush(p);
+    down = null;
+  });
+  st.addEventListener("pointercancel", () => { down = null; acc = 0; });
+  st.addEventListener("wheel", e => { e.preventDefault(); const p = rbPoint(e); acc += e.deltaY; if (Date.now() - last > 50) flush(p); else { clearTimeout(tail); tail = setTimeout(() => flush(p), 60); } }, {passive: false});
+})();
+$("#rb_keys").onsubmit = async e => {
+  e.preventDefault();
+  const t = $("#rb_text").value;
+  if (t) await rbSendInput({type: "text", text: t});
+  else await rbSendInput({type: "key", key: "Enter"});
+  $("#rb_text").value = "";
+};
+$("#rb_bs").onclick = () => rbSendInput({type: "key", key: "Backspace"});
+$("#rb_x").onclick = () => closeRb();
+$("#rb_back").onclick = () => api("/api/rb/nav", {method: "POST", body: {action: "back"}}).catch(e => toast(e.message, true));
+$("#rb_reload").onclick = () => api("/api/rb/nav", {method: "POST", body: {action: "reload"}}).catch(e => toast(e.message, true));
+$("#rb_popgo").onclick = () => rbPopup && api("/api/rb/nav", {method: "POST", body: {action: "go", url: rbPopup}}).catch(e => toast(e.message, true));
+$("#rb_addr").onclick = () => {
+  const u = prompt("Adresse öffnen", rbUrl);
+  if (u && u.trim()) api("/api/rb/nav", {method: "POST", body: {action: "go", url: u.trim()}}).catch(e => toast(e.message, true));
+};
+$("#rb_grab").onclick = async () => {
+  const b = $("#rb_grab"); b.disabled = true;
+  try {
+    const r = await api("/api/rb/grab", {method: "POST"});
+    if (r.plain) {
+      // Kein Click'n'Load gefunden: alle Links der Seite zur Auswahl anbieten
+      closeRb(false, () => { openLinks(r.urls.join("\n")); toast("Kein Click'n'Load gefunden – alle Links der Seite eingefügt, bitte prüfen", true); });
+    } else rbFound(r);
+  } catch (e) { toast(e.message, true); }
+  b.disabled = false;
+};
+let rbResizeT = null;
+addEventListener("resize", () => {
+  if (!rbOn) return;
+  clearTimeout(rbResizeT);
+  rbResizeT = setTimeout(() => { const d = rbDims(); api("/api/rb/resize", {method: "POST", body: d}).catch(() => {}); }, 300);
+});
+$("#lk_web").onclick = () => {
+  const text = $("#lk_text").value, prot = protectorLinks(text), all = text.match(linkRe) || [];
+  const url = prot[0] || all[0] || prompt("Welche Seite öffnen? (z. B. filecrypt-Link)", "");
+  if (url && url.trim()) openRb(url.trim());
+};
 
 /* JDownloader live */
 let jdTimer = null, jdTab = "downloads", jdLast = null;
@@ -1085,7 +1275,7 @@ function closeJd(fromHistory) {
   $("#jdscrim").hidden = true; clearInterval(jdTimer);
   if (!fromHistory && history.state && history.state.sheet === "jd") history.back();
 }
-window.addEventListener("popstate", () => closeJd(true));
+window.addEventListener("popstate", ev => { if (!rbEatPop(ev)) closeJd(true); });
 function setJdTab(tab) {
   jdTab = tab;
   document.querySelectorAll("[data-jdtab]").forEach(b => b.setAttribute("aria-selected", b.dataset.jdtab === tab));
@@ -1171,6 +1361,7 @@ function wireJd() {
   root.querySelectorAll("[data-web]").forEach(b => b.onclick = async () => {
     // Seite im eigenen Browser öffnen; nach dem Senden per Lesezeichen wird dieses Paket gelöscht
     try { await api("/api/jd/pending", {method: "POST", body: {kind: jdTab, uuid: b.dataset.uuid, name: b.dataset.name}}); } catch (e) {}
+    if (rbAvail) return openRb(b.dataset.web);
     window.open(b.dataset.web, "_blank", "noopener");
     toast("Captcha lösen, dann Lesezeichen „Mediasort CNL“ antippen");
   });
@@ -1418,7 +1609,7 @@ let started = false;
 async function start(user) {
   me = user; renderMe();
   $("#linksbtn").hidden = !me.can_links;
-  if (me.can_links) api("/api/links").then(r => { jdLive = !!r.live; $("#jdbtn").hidden = !jdLive; }).catch(() => {});
+  if (me.can_links) api("/api/links").then(r => { jdLive = !!r.live; $("#jdbtn").hidden = !jdLive; rbAvail = !!r.browser; }).catch(() => {});
   // Über "Teilen → Mediasort" (Android) geöffnet: Links direkt ins Fenster übernehmen
   if (location.pathname === "/cnl") handleCnl();
   else if (location.pathname === "/share") {
