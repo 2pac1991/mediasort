@@ -14,13 +14,8 @@ RUN apk add --no-cache su-exec tzdata bash curl ca-certificates jq iptables ip6t
 LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/2pac1991/mediasort/main/unraid/icon.png" \
       net.unraid.docker.webui="http://[IP]:[PORT:8484]/"
 
-# Chromium und Schriften: eingebauter Browser zum Lösen von Captchas mit Click'n'Load
-# Xvfb: virtueller Bildschirm, damit Chromium als normaler Browser läuft statt unsichtbar
-RUN apk add --no-cache chromium font-noto xvfb \
- && mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
-
-# cryptography: Verschlüsselung für die My.JDownloader-API; websocket-client: Steuerung von Chromium
-RUN pip install --no-cache-dir cryptography==44.0.0 websocket-client==1.8.0
+# cryptography: Verschlüsselung für die My.JDownloader-API
+RUN pip install --no-cache-dir cryptography==44.0.0
 
 WORKDIR /opt/mediasort
 COPY app ./app
