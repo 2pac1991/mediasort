@@ -187,6 +187,7 @@ textarea{min-height:64px;resize:vertical;font-size:14px}
 .jdacts button{border:1px solid #c5cad1;background:linear-gradient(#fff,#eceff2);color:#333;border-radius:4px;font-size:12px;padding:3px 9px;cursor:pointer}
 .jdacts button.go{color:#1b5e20;border-color:#9fbf8f}
 .jdacts button.del{color:#b71c1c}
+.jdacts button.web{color:#0d47a1;border-color:#90b4e6}
 .jdempty{padding:28px 14px;text-align:center;color:#6b7684;font-size:13px}
 .jdtoolbar{position:sticky;bottom:0;display:flex;align-items:center;gap:8px;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(#eef0f2,#d9dde2);border-top:1px solid #b9bfc7}
 .jdtool{width:38px;height:38px;border-radius:50%;border:1px solid #aab1ba;background:linear-gradient(#fff,#e3e6ea);font-size:15px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.15)}
@@ -926,7 +927,7 @@ $("#lk_send").onclick = async () => {
   const b = $("#lk_send"); b.disabled = true;
   try {
     const r = await api("/api/links", {method: "POST", body: {text: $("#lk_text").value, package: $("#lk_pkg").value}});
-    toast(`${r.count} ${r.count === 1 ? "Link" : "Links"} an JDownloader gesendet`);
+    toast(`${r.count} ${r.count === 1 ? "Link" : "Links"} an JDownloader gesendet${r.cleaned ? ` · hängendes Paket „${r.cleaned}“ entfernt` : ""}`);
     $("#lk_text").value = ""; $("#lk_pkg").value = ""; countLinks();
     closeLinks();
     if (jdLive) setTimeout(() => openJd("grabber"), 350);
@@ -998,6 +999,7 @@ function renderJd(r) {
       <span class="sz">${fmtSize(p.bytesTotal)}</span>
       <div class="pr">${kind === "grabber" ? jdAvail(undefined, p.onlineCount, p.offlineCount, p.unknownCount) : jdProgress(p.bytesLoaded, p.bytesTotal, p.finished)}</div>
       <div class="jdacts">
+        ${p.source_url ? `<button type="button" class="web" data-web="${esc(p.source_url)}" data-uuid="${p.uuid}" data-name="${esc(p.name)}">🌐 Im Browser lösen</button>` : ""}
         ${kind === "grabber" ? `<button type="button" class="go" data-start="${p.uuid}">▶ Starten</button>` : ""}
         <button type="button" class="del" data-del-pkg="${p.uuid}" data-name="${esc(p.name)}">🗑 Löschen</button></div></div>`;
     if (open) {
@@ -1043,6 +1045,12 @@ function wireJd() {
     const set = jdOpen[jdTab], id = row.dataset.toggle;
     set.has(id) ? set.delete(id) : set.add(id);
     renderJd(jdLast); refreshJd();
+  });
+  root.querySelectorAll("[data-web]").forEach(b => b.onclick = async () => {
+    // Seite im eigenen Browser öffnen; nach dem Senden per Lesezeichen wird dieses Paket gelöscht
+    try { await api("/api/jd/pending", {method: "POST", body: {kind: jdTab, uuid: b.dataset.uuid, name: b.dataset.name}}); } catch (e) {}
+    window.open(b.dataset.web, "_blank", "noopener");
+    toast("Captcha lösen, dann Lesezeichen „Mediasort CNL“ antippen");
   });
   root.querySelectorAll("[data-start]").forEach(b => b.onclick = async () => {
     b.disabled = true;

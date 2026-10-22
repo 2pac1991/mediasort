@@ -1,6 +1,7 @@
 """HTTP-Server mit JSON-API und Web-Oberfläche (nur Python-Standardbibliothek)."""
 import json
 import logging
+import time
 import os
 import re
 import threading
@@ -15,6 +16,8 @@ STATIC = os.path.join(os.path.dirname(__file__), "static")
 # Früherer Einzel-Passwortschutz: wenn gesetzt, muss er beim Anlegen des ersten Admins angegeben werden
 SETUP_CODE = os.environ.get("UI_PASSWORD", "")
 COOKIE = "mediasort_session"
+# Hängendes JDownloader-Paket, das jemand gerade im Browser löst: wird nach erfolgreichem Senden gelöscht
+PENDING = {}
 log = logging.getLogger("mediasort")
 
 # Statische Dateien für Icon und Web-App (ohne Anmeldung, sonst kann das Handy sie nicht laden)
@@ -243,7 +246,20 @@ class Handler(BaseHTTPRequestHandler):
                 self._need(add_links=True)
                 n = links.send(body.get("text"), body.get("package"), self.me["name"])
                 log.info("%s hat %d Link(s) an JDownloader geschickt", self.me["name"], n)
-                return self._send(200, {"ok": True, "count": n})
+                cleaned = None
+                pend = PENDING.pop(self.me["name"], None)
+                if pend and time.time() - pend["ts"] < 1800 and myjd.configured():
+                    try:
+                        myjd.remove(pend["kind"], [], [pend["uuid"]])
+                        cleaned = pend["name"]
+                    except myjd.MyJDError as e:
+                        log.warning("Hängendes Paket nicht gelöscht: %s", e)
+                return self._send(200, {"ok": True, "count": n, "cleaned": cleaned})
+            if u.path == "/api/jd/pending":
+                self._need(add_links=True)
+                PENDING[self.me["name"]] = {"kind": "grabber" if body.get("kind") == "grabber" else "downloads",
+                                            "uuid": int(body["uuid"]), "name": body.get("name", ""), "ts": time.time()}
+                return self._send(200, {"ok": True})
             if u.path in ("/api/jd/start", "/api/jd/control"):
                 self._need(add_links=True)
                 try:

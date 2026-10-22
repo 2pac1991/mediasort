@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import threading
 import time
 import urllib.error
@@ -193,7 +194,19 @@ def status():
         "maxResults": -1, "startAt": 0,
     }]) or []
     state = _device_call("/downloadcontroller/getCurrentState")
+    # Hängende Pakete (Captcha, Schutzseite): Adresse der Seite mitliefern, damit man sie im Browser lösen kann
+    for kind, pkgs in (("grabber", grabber), ("downloads", downloads)):
+        for p in pkgs:
+            if STUCK.search(p.get("status") or "") or any(PROTECTORS.search(h or "") for h in p.get("hosts") or []):
+                urls = [l.get("url") for l in links(kind, [p["uuid"]]) if l.get("url")]
+                if urls:
+                    p["source_url"] = urls[0]
     return {"device": _cache["dev"]["name"], "state": state, "grabber": grabber, "downloads": downloads}
+
+
+STUCK = re.compile(r"captcha|unsupported|crypt|schutz|protect", re.IGNORECASE)
+PROTECTORS = re.compile(r"(^|\.)(filecrypt\.(cc|co|to)|linkcrypt\.ws|keeplinks\.(org|co)|safelinking\.net|ncrypt\.in|"
+                        r"share-links\.biz|hide\.cx|relink\.(us|to)|dir\.cr|protect-links\.net|linksafe\.cc)$", re.IGNORECASE)
 
 
 def start_packages(package_ids):
@@ -216,7 +229,7 @@ def control(action):
         raise ValueError("Unbekannte Aktion")
 
 
-LINK_QUERY = {"bytesTotal": True, "bytesLoaded": True, "status": True, "availability": True, "host": True,
+LINK_QUERY = {"bytesTotal": True, "bytesLoaded": True, "status": True, "availability": True, "host": True, "url": True,
               "finished": True, "running": True, "enabled": True, "maxResults": -1, "startAt": 0}
 _removed = []  # zuletzt automatisch entfernte Dateien, für die Anzeige
 
