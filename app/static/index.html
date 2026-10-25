@@ -267,6 +267,11 @@ details summary{cursor:pointer}
 .jdtabs button{border:1px solid #b9bfc7;border-bottom:0;background:linear-gradient(#eef0f2,#dde1e5);color:#3b4450;padding:7px 12px;border-radius:6px 6px 0 0;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:-1px}
 .jdtabs button[aria-selected=true]{background:#fff;color:#111;border-color:#b9bfc7;position:relative;z-index:1}
 .jdtabs span{color:#6b7684;font-weight:500}
+.jdacc{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line,#2A3441);font-size:12.5px}
+.jdacc .acc{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(80,200,120,.12);color:#3fb873;border:1px solid rgba(80,200,120,.35);white-space:nowrap}
+.jdacc .acc.warn{background:rgba(245,184,61,.12);color:#d99a1e;border-color:rgba(245,184,61,.45)}
+.jdacc .acc.bad{background:rgba(230,80,80,.12);color:#e05a5a;border-color:rgba(230,80,80,.45)}
+.jdacc .acc.off{opacity:.55}
 .jdremoved{background:#fff8e1;border-bottom:1px solid #f0d27a;color:#6d5300;font-size:12.5px;padding:8px 12px;animation:jdfade 15s forwards}
 @keyframes jdfade{0%,85%{opacity:1}100%{opacity:0}}
 .jdtable{flex:1;background:#fff;overflow:auto}
@@ -678,6 +683,7 @@ details summary{cursor:pointer}
       <button type="button" role="tab" data-jdtab="grabber" aria-selected="false">🔗 LinkGrabber <span id="jd_n_lg"></span></button>
     </div>
     <div id="jd_removed" class="jdremoved" hidden></div>
+    <div id="jd_acc" class="jdacc" hidden></div>
     <div class="jdtable">
       <div class="jdhead"><span>Name</span><span>Größe</span><span id="jd_col3">Fortschritt</span></div>
       <div id="jd_rows"></div>
@@ -1230,6 +1236,30 @@ function renderJd(r) {
   }).join("");
   wireJd();
 }
+// Premium-Konten: wie lange noch gültig (grün > 7 Tage, gelb ≤ 7 Tage, rot abgelaufen/fehlerhaft)
+function renderAccounts(list) {
+  const box = $("#jd_acc");
+  if (!list.length) { box.hidden = true; return; }
+  const now = Date.now() / 1000;
+  const html = list.map(a => {
+    const name = esc(a.host.replace(/^www\./, ""));
+    const traffic = a.traffic_left != null && a.traffic_left >= 0 && a.traffic_max > 0 ? ` · ${fmtSize(a.traffic_left)} frei` : "";
+    let cls = "", text;
+    if (!a.enabled) { cls = "off"; text = "deaktiviert"; }
+    else if (a.until && a.until < now) { cls = "bad"; text = "Premium abgelaufen"; }
+    else if (a.valid === false || a.error) { cls = "bad"; text = esc(a.error || "Konto ungültig"); }
+    else if (!a.until) text = "Premium unbegrenzt";
+    else {
+      const days = Math.floor((a.until - now) / 86400);
+      const date = new Date(a.until * 1000).toLocaleDateString("de-AT", {day: "2-digit", month: "2-digit", year: "numeric"});
+      if (days <= 7) cls = "warn";
+      text = days < 1 ? `nur noch ${Math.max(1, Math.round((a.until - now) / 3600))} Std. (bis ${date})` : `noch ${days} ${days === 1 ? "Tag" : "Tage"} (bis ${date})`;
+    }
+    return `<span class="acc ${cls}" title="${esc(a.user)}">⭐ <b>${name}</b> ${text}${traffic}</span>`;
+  }).join("");
+  if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; }
+  box.hidden = false;
+}
 async function refreshJd() {
   if (document.hidden) return;
   try {
@@ -1242,6 +1272,7 @@ async function refreshJd() {
     const speed = (r.downloads || []).reduce((n, p) => n + (p.running ? p.speed || 0 : 0), 0);
     $("#jd_speed").textContent = speed ? `⬇ ${fmtSize(speed)}/s` : "";
     $("#jd_pause").setAttribute("aria-pressed", r.state === "PAUSE");
+    renderAccounts(r.accounts || []);
     // Hinweis auf automatisch Entferntes nur 15 Sekunden zeigen
     const rem = (r.removed || []).filter(x => Date.now() / 1000 - x.ts < 15);
     const box = $("#jd_removed");

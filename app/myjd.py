@@ -201,7 +201,42 @@ def status():
                 urls = [l.get("url") for l in links(kind, [p["uuid"]]) if l.get("url")]
                 if urls:
                     p["source_url"] = urls[0]
-    return {"device": _cache["dev"]["name"], "state": state, "grabber": grabber, "downloads": downloads}
+    return {"device": _cache["dev"]["name"], "state": state, "grabber": grabber, "downloads": downloads,
+            "accounts": accounts()}
+
+
+_acc = {"ts": 0, "items": []}
+ACC_TTL = 600
+
+
+def accounts():
+    """Premium-Konten im JDownloader (Hoster, gültig bis, Traffic). Ändert sich selten: 10 Minuten zwischenspeichern."""
+    if time.time() - _acc["ts"] < ACC_TTL:
+        return _acc["items"]
+    try:
+        raw = _device_call("/accountsV2/listAccounts", [{
+            "userName": True, "validUntil": True, "trafficLeft": True, "trafficMax": True,
+            "enabled": True, "valid": True, "error": True,
+        }]) or []
+    except MyJDError:
+        raw = None  # ältere JDownloader-Versionen: einfach nichts anzeigen
+    items = []
+    for a in raw or []:
+        until = a.get("validUntil")
+        items.append({
+            "host": a.get("hostname") or "",
+            "user": a.get("username") or "",
+            "enabled": a.get("enabled", True),
+            "valid": a.get("valid", True),
+            "error": a.get("errorString") or a.get("errorType") or "",
+            # Millisekunden seit 1970; -1 oder fehlend = unbegrenzt
+            "until": int(until / 1000) if isinstance(until, (int, float)) and until > 0 else None,
+            "traffic_left": a.get("trafficLeft"),
+            "traffic_max": a.get("trafficMax"),
+        })
+    items.sort(key=lambda x: (not x["enabled"], x["until"] or 1e12))
+    _acc.update(ts=time.time() if raw is not None else time.time() - ACC_TTL + 60, items=items)
+    return items
 
 
 STUCK = re.compile(r"captcha|unsupported|crypt|schutz|protect", re.IGNORECASE)
