@@ -72,6 +72,15 @@ Alternativ ohne My.JDownloader über einen überwachten Ordner:
 3. Den Ordner anlegen: `/mnt/user/Plex/Downloads/.mediasort-links`.
 4. In Saugmeister unter **Einstellungen → JDownloader** denselben Ordner so eintragen, wie Saugmeister ihn sieht: `/data/Downloads/.mediasort-links`.
 
+## Captchas am Handy lösen (auch iPhone)
+
+Hängt der JDownloader an einem Captcha (z. B. beim Entschlüsseln eines filecrypt-Ordners), meldet Saugmeister das: Im Eingang erscheint **🔐 Captcha lösen**, und wer die Home-Assistant-Benachrichtigung eingerichtet hat, bekommt eine Push-Nachricht. Antippen öffnet das Captcha direkt in Saugmeister:
+
+- **Bild-Captchas** (Zeichen abtippen) und **Klick-Captchas** (z. B. filecrypts „Klick auf den offenen Kreis") werden hier gelöst, der JDownloader macht danach sofort weiter.
+- **reCAPTCHA/hCaptcha** sind an die Domain der Seite gebunden und lassen sich nur auf der Seite selbst lösen. Dafür wie bisher im JDownloader-Fenster beim Paket auf **🌐 Im Browser lösen** tippen.
+
+Voraussetzung: My.JDownloader ist in den Einstellungen eingetragen. Für die Push-Nachricht die aktuelle Version der Blueprint `homeassistant/mediasort-benachrichtigung.yaml` neu importieren.
+
 ## Click'n'Load am Handy
 
 Im Fenster **＋ Links senden** gibt es unter **Click'n'Load am Handy einrichten** ein Lesezeichen (Bookmarklet). Auf einer Seite mit Click'n'Load-Knopf das Lesezeichen antippen: Es liest die verschlüsselten CNL-Daten (`crypted`, `jk`) der Seite aus, Saugmeister entschlüsselt sie und zeigt die Links zum Senden an. Das JavaScript aus `jk` wird dabei nie ausgeführt, nur der Schlüssel wird herausgelesen. Findet das Lesezeichen keinen Click'n'Load-Knopf, werden die Links der Seite zur Auswahl eingefügt.

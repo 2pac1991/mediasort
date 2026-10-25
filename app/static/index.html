@@ -366,6 +366,28 @@ details summary{cursor:pointer}
   .scard .v{font-size:20px}
 }
 
+/* ---------- Captcha lösen ---------- */
+.capbtn{background:var(--amber-soft);color:var(--amber);border-color:rgba(245,184,61,.45);animation:cappulse 2s ease-in-out infinite}
+@keyframes cappulse{0%,100%{box-shadow:0 0 0 0 rgba(245,184,61,.35)}50%{box-shadow:0 0 0 6px rgba(245,184,61,0)}}
+.dlg.capdlg{width:min(460px,100%);text-align:left;padding:22px 20px 18px}
+.capdlg .caphead{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.capdlg .caphead .ic{width:44px;height:44px;border-radius:13px;background:var(--amber-soft);display:grid;place-items:center;font-size:22px;flex-shrink:0}
+.capdlg .caphead h2{margin:0;font-size:19px}
+.capdlg .caphead small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.capdlg .caphead .left{margin-left:auto;font-size:12.5px;font-weight:650;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.capdlg .caphead .left.low{color:var(--bad)}
+.dlg.capdlg .explain{color:var(--text-2);font-size:14.5px;margin:0 0 12px;line-height:1.45}
+.capimg{position:relative;border-radius:var(--r-md);overflow:hidden;background:#fff;border:1px solid var(--line-2);min-height:80px;display:grid;place-items:center;touch-action:manipulation}
+.capimg img{display:block;width:100%;height:auto;image-rendering:auto;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.capimg.clickable img{cursor:crosshair}
+.capimg .mk{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:3px solid var(--amber);background:rgba(245,184,61,.25);box-shadow:0 0 0 2px rgba(0,0,0,.45);pointer-events:none;display:grid;place-items:center;font-size:11px;font-weight:800;color:#1d1405}
+.capimg .load{color:#5d6776;font-size:13px;padding:30px}
+.capdlg input.capin{margin-top:12px;font-size:20px;letter-spacing:.08em;text-align:center;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.capdlg .acts{display:grid;gap:10px;margin-top:16px}
+.capdlg .acts .row2{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:10px}
+.capdlg .acts .btn{width:100%;justify-content:center;padding:12px}
+.capdlg .hint2{color:var(--muted);font-size:13px;margin-top:10px;line-height:1.45}
+
 /* ---------- Desktop: Navigation als Seitenleiste ---------- */
 @media (min-width:1000px){
   header{border-bottom:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;position:static}
@@ -463,6 +485,7 @@ details summary{cursor:pointer}
       <button class="btn ghost" id="rescan" title="Alle offenen Dateien neu bei TMDB abfragen">Neu erkennen</button>
       <button class="btn" id="linksbtn" type="button" hidden>＋ Links senden</button>
       <button class="btn ghost" id="jdbtn" type="button" hidden>📥 JDownloader</button>
+      <button class="btn capbtn" id="capbtn" type="button" hidden>🔐 Captcha lösen</button>
       <button class="btn ghost" id="selall" type="button">☑ Alle auswählen</button>
       <span class="grow"></span>
       <div class="filters" id="filters"></div>
@@ -722,6 +745,21 @@ details summary{cursor:pointer}
   </div>
 </div>
 
+
+<div class="dlgscrim" id="capscrim" hidden>
+  <div class="dlg capdlg" role="dialog" aria-modal="true" aria-labelledby="cap_t">
+    <div class="caphead"><div class="ic">🔐</div><div style="min-width:0"><h2 id="cap_t">Captcha lösen</h2><small id="cap_host"></small></div><span class="left" id="cap_left"></span></div>
+    <p class="explain" id="cap_explain"></p>
+    <div class="capimg" id="cap_img"></div>
+    <input type="text" class="capin" id="cap_in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Zeichen eingeben" hidden>
+    <div class="hint2" id="cap_hint" hidden></div>
+    <div class="acts">
+      <button class="btn primary" type="button" id="cap_ok">Senden</button>
+      <div class="row2"><button class="btn ghost" type="button" id="cap_new">↻ Neues Bild</button><button class="btn ghost" type="button" id="cap_skip">Überspringen</button></div>
+      <button class="btn ghost" type="button" id="cap_close">Später</button>
+    </div>
+  </div>
+</div>
 
 <div class="dlgscrim" id="dlg" hidden>
   <div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dlg_t">
@@ -1273,6 +1311,128 @@ async function checkUhd() {
 setInterval(checkUhd, 30000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) checkUhd(); });
 
+/* Captchas: was der JDownloader nicht selbst lösen kann, hier am Handy lösen (auch am iPhone) */
+let capList = [], capCur = null, capPts = [], capBusy = false, capTick = null, capSeen = new Set(), capAuto = false;
+async function checkCaptchas() {
+  if (capBusy || !jdLive || !me || !me.can_links || document.hidden) return;
+  capBusy = true;
+  try {
+    capList = await api("/api/jd/captchas");
+    const n = capList.length, fresh = capList.filter(c => !capSeen.has(c.id));
+    capList.forEach(c => capSeen.add(c.id));
+    $("#capbtn").hidden = !n;
+    $("#capbtn").textContent = n > 1 ? `🔐 ${n} Captchas lösen` : "🔐 Captcha lösen";
+    if (capAuto && n && $("#capscrim").hidden) { capAuto = false; openCaptcha(); }
+    else if (fresh.length && $("#capscrim").hidden) toast(`JDownloader wartet auf ein Captcha${fresh[0].hoster ? " für " + fresh[0].hoster : ""}`);
+    // Das offene Captcha ist abgelaufen oder woanders gelöst worden
+    if (capCur && !capList.some(c => c.id === capCur.id)) nextCaptcha("Das Captcha ist nicht mehr da");
+  } catch (e) { /* JDownloader gerade nicht erreichbar */ }
+  capBusy = false;
+}
+setInterval(checkCaptchas, 15000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) checkCaptchas(); });
+$("#capbtn").onclick = () => openCaptcha();
+
+function openCaptcha(id) {
+  const c = capList.find(x => x.id === id) || capList[0];
+  if (!c) { $("#capbtn").hidden = true; return toast("Gerade wartet kein Captcha"); }
+  capCur = c; capPts = [];
+  $("#capscrim").hidden = false;
+  $("#cap_host").textContent = (c.hoster || "JDownloader") + (capList.length > 1 ? ` · ${capList.indexOf(c) + 1} von ${capList.length}` : "");
+  const solvable = ["text", "click", "multiclick"].includes(c.kind);
+  const explain = {click: "Tippe auf die richtige Stelle im Bild (bei filecrypt: auf den offenen Kreis).",
+    multiclick: "Tippe alle passenden Stellen an, dann auf „Fertig“.", text: "Gib die Zeichen aus dem Bild ein."}[c.kind];
+  $("#cap_explain").textContent = c.explain && c.kind !== "browser" ? c.explain : explain || "";
+  $("#cap_explain").hidden = !solvable;
+  $("#cap_in").hidden = c.kind !== "text"; $("#cap_in").value = "";
+  $("#cap_ok").hidden = !solvable; $("#cap_new").hidden = !solvable;
+  $("#cap_ok").textContent = c.kind === "multiclick" ? "Fertig" : "Senden";
+  $("#cap_ok").disabled = c.kind !== "text";
+  $("#cap_img").hidden = !solvable;
+  $("#cap_img").className = "capimg" + (c.kind === "click" || c.kind === "multiclick" ? " clickable" : "");
+  const hint = $("#cap_hint");
+  if (c.kind === "browser") {
+    hint.innerHTML = `Das ist ein ${/hcaptcha/i.test(c.type) ? "hCaptcha" : "reCAPTCHA"}. Das lässt sich nur auf der Seite selbst lösen, nicht hier und nicht im JDownloader. Öffne das JDownloader-Fenster und tippe beim hängenden Paket auf <b>🌐 Im Browser lösen</b>.`;
+    $("#cap_ok").hidden = false; $("#cap_ok").disabled = false; $("#cap_ok").textContent = "JDownloader öffnen";
+  } else if (!solvable) {
+    hint.textContent = "Diese Art Captcha kann Saugmeister nicht anzeigen. Überspringen oder am PC im JDownloader lösen.";
+  }
+  hint.hidden = solvable;
+  capCountdown();
+  if (solvable) loadCaptchaImage(c);
+}
+async function loadCaptchaImage(c) {
+  $("#cap_img").innerHTML = `<div class="load"><span class="spin"></span> Captcha wird geladen …</div>`;
+  try {
+    const r = await api(`/api/jd/captcha?id=${encodeURIComponent(c.id)}`);
+    if (capCur !== c) return;
+    $("#cap_img").innerHTML = `<img alt="Captcha" draggable="false" src="${r.image}">`;
+    const img = $("#cap_img img");
+    if (c.kind === "click" || c.kind === "multiclick") img.onclick = e => {
+      const rect = img.getBoundingClientRect();
+      const fx = img.naturalWidth / rect.width, fy = img.naturalHeight / rect.height;
+      const pt = [Math.round((e.clientX - rect.left) * fx), Math.round((e.clientY - rect.top) * fy)];
+      if (c.kind === "click") capPts = [pt]; else capPts.push(pt);
+      renderMarks(); $("#cap_ok").disabled = false;
+    };
+    if (c.kind === "text") setTimeout(() => $("#cap_in").focus(), 50);
+  } catch (e) { nextCaptcha(e.message); }
+}
+function renderMarks() {
+  const img = $("#cap_img img"); if (!img) return;
+  $("#cap_img").querySelectorAll(".mk").forEach(m => m.remove());
+  const w = img.clientWidth / img.naturalWidth, h = img.clientHeight / img.naturalHeight;
+  capPts.forEach((p, i) => {
+    const m = document.createElement("div"); m.className = "mk";
+    m.style.left = p[0] * w + "px"; m.style.top = p[1] * h + "px";
+    if (capCur.kind === "multiclick") m.textContent = i + 1;
+    $("#cap_img").appendChild(m);
+  });
+}
+function capCountdown() {
+  clearInterval(capTick);
+  const c = capCur; if (!c || c.remaining == null) { $("#cap_left").textContent = ""; return; }
+  const end = Date.now() + c.remaining * 1000;
+  const draw = () => {
+    const left = Math.max(0, Math.round((end - Date.now()) / 1000));
+    $("#cap_left").textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+    $("#cap_left").classList.toggle("low", left < 30);
+    if (!left) clearInterval(capTick);
+  };
+  draw(); capTick = setInterval(draw, 1000);
+}
+function closeCaptcha() { $("#capscrim").hidden = true; clearInterval(capTick); capCur = null; }
+function nextCaptcha(msg) {
+  const done = capCur; capList = capList.filter(c => c !== done && (!done || c.id !== done.id));
+  if (msg) toast(msg, /nicht mehr|Fehler/.test(msg));
+  $("#capbtn").hidden = !capList.length;
+  if (capList.length) openCaptcha(); else closeCaptcha();
+  setTimeout(checkCaptchas, 2500);
+}
+$("#cap_ok").onclick = async () => {
+  const c = capCur; if (!c) return;
+  if (c.kind === "browser") { closeCaptcha(); return openJd("grabber"); }
+  const body = {id: c.id};
+  if (c.kind === "text") { body.text = $("#cap_in").value.trim(); if (!body.text) return $("#cap_in").focus(); }
+  else { if (!capPts.length) return toast("Bitte ins Bild tippen", true); body.points = capPts; body.multi = c.kind === "multiclick"; }
+  $("#cap_ok").disabled = true;
+  try { await api("/api/jd/captcha/solve", {method: "POST", body}); nextCaptcha("Gesendet – der JDownloader macht weiter"); }
+  catch (e) { toast(e.message, true); $("#cap_ok").disabled = false; if (/nicht mehr/.test(e.message)) nextCaptcha(); }
+};
+$("#cap_in").onkeydown = e => { if (e.key === "Enter") $("#cap_ok").click(); };
+$("#cap_new").onclick = async () => {
+  const c = capCur; if (!c) return;
+  try { await api("/api/jd/captcha/skip", {method: "POST", body: {id: c.id, type: "REFRESH"}}); toast("Neues Bild wird geholt …"); closeCaptcha(); capAuto = true; setTimeout(checkCaptchas, 3000); }
+  catch (e) { toast(e.message, true); }
+};
+$("#cap_skip").onclick = async () => {
+  const c = capCur; if (!c) return;
+  try { await api("/api/jd/captcha/skip", {method: "POST", body: {id: c.id, type: "SINGLE"}}); nextCaptcha("Übersprungen"); }
+  catch (e) { toast(e.message, true); }
+};
+$("#cap_close").onclick = closeCaptcha;
+window.addEventListener("resize", renderMarks);
+
 /* JDownloader live */
 let jdTimer = null, jdTab = "downloads", jdLast = null;
 const STATES = {RUNNING: "Lädt", PAUSE: "Pausiert", IDLE: "Bereit", STOPPED: "Gestoppt", STOPPING: "Stoppt …"};
@@ -1747,6 +1907,9 @@ async function start(user) {
   $("#linksbtn").hidden = !me.can_links;
   if (me.can_links) api("/api/links").then(r => {
     jdLive = !!r.live; $("#jdbtn").hidden = !jdLive; checkUhd();
+    // Aus der Captcha-Benachrichtigung geöffnet: Captcha gleich anzeigen
+    if (new URLSearchParams(location.search).get("captcha")) { history.replaceState(null, "", "/"); capAuto = true; }
+    checkCaptchas();
     // Aus einer Benachrichtigung der Android-App: gleich das JDownloader-Fenster zeigen
     const jdq = new URLSearchParams(location.search).get("jd");
     if (jdq) { history.replaceState(null, "", "/"); if (jdLive) openJd(jdq === "downloads" ? "downloads" : "grabber"); }

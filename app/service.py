@@ -212,13 +212,47 @@ def send_webhooks(urls, payload, wait=False):
     return errors
 
 
+_captchas_seen = set()
+
+
+def check_captchas():
+    """Neue Captchas im JDownloader: einmal pro Captcha Bescheid geben (Webhook, z. B. aufs Handy)."""
+    jobs = myjd.captcha_list()
+    new = [j for j in jobs if j["id"] not in _captchas_seen]
+    _captchas_seen.intersection_update({j["id"] for j in jobs})
+    _captchas_seen.update(j["id"] for j in jobs)
+    if not new:
+        return
+    log.info("JDownloader wartet auf %d Captcha(s): %s", len(new), ", ".join(j["hoster"] for j in new))
+    urls = list(dict.fromkeys(users.link_webhooks()))
+    if not urls:
+        return
+    hosts = ", ".join(dict.fromkeys(j["hoster"] for j in new if j["hoster"]))
+    solvable = [j for j in new if j["kind"] in ("text", "click", "multiclick")]
+    text = (f"Captcha{' für ' + hosts if hosts else ''} – antippen und in Saugmeister lösen"
+            if solvable else f"Captcha{' für ' + hosts if hosts else ''} – muss im Browser gelöst werden")
+    send_webhooks(urls, {"type": "captcha", "count": len(new), "items": [], "files": [],
+                         "title": "🔐 Captcha lösen", "text": text, "path": "/?captcha=1"})
+
+
 def watch_loop(stop_event):
     """Watch-Ordner: neue Dateien erkennen, sobald sie fertig geschrieben sind, sichere Treffer automatisch einsortieren."""
     sizes = {}
     last_purge = 0
     last_cleanup = 0
     last_dedupe = 0
+    last_captcha = 0
+    last_watch = 0
+    captcha_every = 20
     while not stop_event.is_set():
+        if myjd.configured() and time.time() - last_captcha > captcha_every:
+            last_captcha = time.time()
+            try:
+                check_captchas()
+                captcha_every = 20
+            except Exception as e:  # noqa: BLE001
+                captcha_every = 120  # JDownloader nicht erreichbar: seltener fragen
+                log.debug("Captchas nicht abrufbar: %s", e)
         if time.time() - last_cleanup > 600:
             last_cleanup = time.time()
             try:
@@ -243,7 +277,10 @@ def watch_loop(stop_event):
             except Exception as e:  # noqa: BLE001
                 log.debug("Abgleich mit JDownloader nicht möglich: %s", e)
         interval = max(15, int(s.get("watch_interval") or 60))
-        if s.get("watch_enabled") and s.get("tmdb_api_key"):
+        if s.get("watch_enabled") and s.get("tmdb_api_key") and time.time() - last_watch < interval - 1:
+            pass  # Watch-Ordner erst wieder nach `interval` Sekunden
+        elif s.get("watch_enabled") and s.get("tmdb_api_key"):
+            last_watch = time.time()
             state["watch_running"] = True
             try:
                 settle = int(s.get("watch_settle_seconds", 120) if s.get("watch_settle_seconds") is not None else 120)
@@ -268,4 +305,5 @@ def watch_loop(stop_event):
             state["watch_last_run"] = time.time()
         else:
             state["watch_running"] = False
-        stop_event.wait(interval)
+        # Kurz warten, damit Captchas schnell gemeldet werden; der Watch-Ordner läuft trotzdem nur alle `interval` Sekunden
+        stop_event.wait(min(interval, 20) if myjd.configured() else interval)

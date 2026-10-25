@@ -161,6 +161,20 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, st)
                 except myjd.MyJDError as e:
                     raise ValueError(str(e)) from e
+            if u.path == "/api/jd/captchas":
+                self._need(add_links=True)
+                if not myjd.configured():
+                    return self._send(200, [])
+                try:
+                    return self._send(200, myjd.captcha_list())
+                except myjd.MyJDError as e:
+                    raise ValueError(str(e)) from e
+            if u.path == "/api/jd/captcha":
+                self._need(add_links=True)
+                try:
+                    return self._send(200, {"image": myjd.captcha_image(int(q["id"]))})
+                except myjd.MyJDError as e:
+                    raise ValueError("Das Captcha ist nicht mehr da (abgelaufen oder schon gelöst)") from e
             if u.path == "/api/jd/uhd":
                 self._need(add_links=True)
                 try:
@@ -290,6 +304,30 @@ class Handler(BaseHTTPRequestHandler):
                     else:
                         myjd.control(body.get("action"))
                     return self._send(200, {"ok": True})
+                except myjd.MyJDError as e:
+                    raise ValueError(str(e)) from e
+            if u.path == "/api/jd/captcha/solve":
+                self._need(add_links=True)
+                if body.get("points"):
+                    pts = body["points"]
+                    if len(pts) == 1 and not body.get("multi"):
+                        result = json.dumps({"x": int(pts[0][0]), "y": int(pts[0][1])})
+                    else:
+                        result = json.dumps({"x": [int(p[0]) for p in pts], "y": [int(p[1]) for p in pts]})
+                else:
+                    result = str(body.get("text", "")).strip()
+                    if not result:
+                        raise ValueError("Bitte die Lösung eingeben")
+                try:
+                    ok = myjd.captcha_solve(int(body["id"]), result)
+                except myjd.MyJDError as e:
+                    raise ValueError("Das Captcha ist nicht mehr da (abgelaufen oder schon gelöst)") from e
+                log.info("%s hat ein Captcha gelöst (#%s)", self.me["name"], body.get("id"))
+                return self._send(200, {"ok": ok})
+            if u.path == "/api/jd/captcha/skip":
+                self._need(add_links=True)
+                try:
+                    return self._send(200, {"ok": myjd.captcha_skip(int(body["id"]), body.get("type", "SINGLE"))})
                 except myjd.MyJDError as e:
                     raise ValueError(str(e)) from e
             if u.path == "/api/jd/uhd/ok":

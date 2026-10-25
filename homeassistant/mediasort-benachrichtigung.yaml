@@ -2,7 +2,8 @@ blueprint:
   name: Saugmeister – Neu in der Mediathek
   description: >
     Schickt eine Benachrichtigung aufs Handy, sobald Saugmeister einen Film, eine
-    Serie oder einen Anime einsortiert hat (mit Titel, Folge und Poster).
+    Serie oder einen Anime einsortiert hat (mit Titel, Folge und Poster), und wenn der
+    JDownloader auf ein Captcha wartet (Antippen öffnet es in Saugmeister).
 
 
     **Einrichtung:** Nach dem Speichern die Webhook-Adresse zusammensetzen:
@@ -49,16 +50,23 @@ variables:
   open_url: !input open_url
   anzahl: "{{ trigger.json.count | default(0) | int(0) }}"
   eintraege: "{{ trigger.json['items'] | default([]) }}"
+  ist_captcha: "{{ trigger.json.type | default('') == 'captcha' }}"
+  ziel: "{{ (open_url | regex_replace('/+$', '')) ~ trigger.json.path if open_url and trigger.json.path is defined else open_url }}"
   poster: "{{ (eintraege | selectattr('poster') | map(attribute='poster') | first) | default('', true) }}"
 
 actions:
   - domain: mobile_app
     type: notify
     device_id: !input notify_device
-    title: "{{ '🎬 Neu in der Mediathek' if anzahl == 1 else '🎬 ' ~ anzahl ~ ' neue Titel in der Mediathek' }}"
+    title: >-
+      {{ trigger.json.title if trigger.json.title is defined
+         else ('🎬 Neu in der Mediathek' if anzahl == 1 else '🎬 ' ~ anzahl ~ ' neue Titel in der Mediathek') }}
     message: "{{ trigger.json.text | default(trigger.json.files | default([]) | join('\n'), true) }}"
     data:
       image: "{{ poster }}"
-      url: "{{ open_url }}"
-      clickAction: "{{ open_url }}"
-      group: mediasort
+      url: "{{ ziel }}"
+      clickAction: "{{ ziel }}"
+      group: "{{ 'mediasort-captcha' if ist_captcha else 'mediasort' }}"
+      # Captchas laufen nach ein paar Minuten ab: auch im Fokus-/Nicht-stören-Modus zeigen (iPhone)
+      push:
+        interruption-level: "{{ 'time-sensitive' if ist_captcha else 'active' }}"

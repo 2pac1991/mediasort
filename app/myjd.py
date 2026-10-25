@@ -341,3 +341,57 @@ def remove_existing():
 def recently_removed():
     with _lock:
         return list(_removed)
+
+
+# ---------- Captchas, die der JDownloader nicht selbst lösen kann ----------
+# Bild- und Klick-Captchas (z. B. der Kreis bei filecrypt) lassen sich über die API lösen.
+# reCAPTCHA, hCaptcha & Co. hängen an der Domain der Seite und gehen nur im Browser auf der Seite selbst.
+CAPTCHA_KINDS = {
+    "ClickCaptchaChallenge": "click",
+    "MultiClickCaptchaChallenge": "multiclick",
+    "BasicCaptchaChallenge": "text",
+    "ImageCaptchaChallenge": "text",
+}
+
+
+def captcha_kind(job):
+    t = job.get("type") or ""
+    if t in CAPTCHA_KINDS:
+        return CAPTCHA_KINDS[t]
+    if "Recaptcha" in t or "HCaptcha" in t:
+        return "browser"
+    return "text" if t.endswith("CaptchaChallenge") and "Key" not in t else "unsupported"
+
+
+def captcha_list():
+    jobs = _device_call("/captcha/list") or []
+    out = []
+    for j in jobs:
+        out.append({
+            "id": j.get("id"), "type": j.get("type") or "", "kind": captcha_kind(j),
+            "hoster": j.get("hoster") or "", "explain": j.get("explain") or "",
+            "remaining": int((j.get("remaining") or 0) / 1000) if (j.get("remaining") or 0) > 1000 else j.get("remaining"),
+            "timeout": j.get("timeout"), "created": j.get("created"),
+        })
+    return out
+
+
+def captcha_image(cid):
+    """Bild als data:-URL (JD liefert "image/png;base64,...")."""
+    data = _device_call("/captcha/get", [int(cid)])
+    if isinstance(data, dict):  # ältere Versionen packen es noch einmal ein
+        data = data.get("data")
+    if not isinstance(data, str) or not data:
+        raise MyJDError("Captcha ist nicht mehr da")
+    return data if data.startswith("data:") else "data:" + data
+
+
+def captcha_solve(cid, result):
+    """result: Text, oder bei Klick-Captchas JSON wie {"x":12,"y":34} bzw. {"x":[..],"y":[..]}."""
+    return bool(_device_call("/captcha/solve", [int(cid), str(result)]))
+
+
+def captcha_skip(cid, kind="SINGLE"):
+    if kind not in ("SINGLE", "REFRESH", "BLOCK_PACKAGE", "BLOCK_HOSTER", "BLOCK_ALL_CAPTCHAS", "STOP_CURRENT_ACTION"):
+        raise ValueError("Unbekannte Aktion")
+    return bool(_device_call("/captcha/skip", [int(cid), kind]))

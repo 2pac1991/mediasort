@@ -201,3 +201,10 @@ def get_webhook(name):
 def all_webhooks():
     with _lock:
         return [u["webhook_url"] for u in _load().values() if u.get("webhook_url")]
+
+
+def link_webhooks():
+    """Webhooks aller, die Links senden dürfen (Admins immer): die bekommen Captcha-Hinweise."""
+    with _lock:
+        return [u["webhook_url"] for u in _load().values()
+                if u.get("webhook_url") and (u.get("role") == "admin" or u.get("can_links"))]
