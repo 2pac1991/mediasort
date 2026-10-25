@@ -314,6 +314,58 @@ details summary{cursor:pointer}
 .jdspeed{margin-left:auto;font-size:12.5px;color:#3b4450;font-weight:600;white-space:nowrap}
 .jdsheet{border-left:0;position:relative}
 
+/* ---------- Speicher ---------- */
+:root{--c-movies:#f5b83d;--c-series:#5b8cff;--c-anime:#e06bd8;--c-dl:#3dd6c4;--c-trash:#8a94a3;--c-other:#3a4555}
+.stor{display:grid;gap:14px}
+.shero{display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center}
+.sring{width:148px;height:148px;position:relative}
+.sring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.sring .lbl{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.sring .lbl b{font-size:30px;font-weight:750;letter-spacing:-.03em;line-height:1}
+.sring .lbl span{font-size:12px;color:var(--muted);margin-top:4px}
+.sbig{font-size:34px;font-weight:750;letter-spacing:-.03em;line-height:1.05}
+.sbig small{font-size:16px;font-weight:550;color:var(--muted);letter-spacing:0}
+.ssub{color:var(--text-2);font-size:14px;margin-top:8px;line-height:1.5}
+.ssub.warn{color:var(--warn)}.ssub.bad{color:var(--bad)}
+.smeta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:14px;font-size:12.5px;color:var(--muted)}
+.sbar{display:flex;height:14px;border-radius:999px;overflow:hidden;background:var(--surface-3);margin:4px 0 14px}
+.sbar i{display:block;height:100%;min-width:2px;transition:width .6s var(--ease)}
+.sbar i+i{box-shadow:-1px 0 0 var(--bg) }
+.slegend{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px 18px}
+.slegend div{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--text-2);min-width:0}
+.slegend i{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.slegend b{margin-left:auto;font-weight:650;color:var(--text);white-space:nowrap}
+.scards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.scard{background:linear-gradient(180deg,var(--surface),var(--bg-2));border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow);cursor:pointer;transition:border-color .2s;text-align:left;color:inherit;font:inherit;width:100%}
+.scard:hover{border-color:var(--line-2)}
+.scard .h{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:650;color:var(--text-2)}
+.scard .h i{width:9px;height:9px;border-radius:50%}
+.scard .v{font-size:24px;font-weight:750;letter-spacing:-.02em;margin:8px 0 4px}
+.scard .d{font-size:12.5px;color:var(--muted);line-height:1.5}
+.scard .d .up{color:var(--ok)}
+.stop h2{margin:0 0 12px}
+.strow{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:10px 4px;border-top:1px solid var(--line);cursor:pointer;align-items:center}
+.strow:first-of-type{border-top:0}
+.strow:hover .nm{color:var(--amber)}
+.strow .nm{font-weight:600;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color .2s}
+.strow .sz{font-weight:650;font-size:13.5px;white-space:nowrap}
+.strow .tb{grid-column:1/-1;display:flex;align-items:center;gap:10px}
+.strow .tb span{font-size:11px;font-weight:650;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);width:56px;flex-shrink:0}
+.strow .tb div{flex:1;height:5px;border-radius:5px;background:var(--surface-3);overflow:hidden}
+.strow .tb div i{display:block;height:100%;border-radius:5px}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line-2);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.skel{color:transparent!important;background:linear-gradient(90deg,var(--surface-2),var(--surface-3),var(--surface-2));background-size:200% 100%;animation:skel 1.4s linear infinite;border-radius:8px}
+@keyframes skel{to{background-position:-200% 0}}
+@media (max-width:999px){
+  .shero{grid-template-columns:1fr;justify-items:center;text-align:center;gap:16px}
+  .smeta{justify-content:center}
+  .sbig{font-size:30px}
+  .scards{grid-template-columns:1fr 1fr;gap:10px}
+  .scard{padding:14px}
+  .scard .v{font-size:20px}
+}
+
 /* ---------- Desktop: Navigation als Seitenleiste ---------- */
 @media (min-width:1000px){
   header{border-bottom:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;position:static}
@@ -398,6 +450,7 @@ details summary{cursor:pointer}
 <nav role="tablist">
   <button role="tab" aria-selected="true" data-tab="inbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg><span>Eingang</span></button>
   <button role="tab" aria-selected="false" data-tab="files"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>Dateien</span></button>
+  <button role="tab" aria-selected="false" data-tab="storage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><path d="M6 16h.01M10 16h.01"/></svg><span>Speicher</span></button>
   <button role="tab" aria-selected="false" data-tab="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg><span>Verlauf</span></button>
   <button role="tab" aria-selected="false" data-tab="settings" id="tabSettings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg><span>Einstellungen</span></button>
     </nav>
@@ -429,6 +482,11 @@ details summary{cursor:pointer}
     </div>
     <div class="crumbs" id="crumbs"></div>
     <div class="list" id="flist"></div>
+  </section>
+
+  <section id="tab-storage" hidden>
+    <div class="pagehead"><div><h1>Speicher</h1><p>Wie viel Platz noch frei ist und was ihn belegt</p></div></div>
+    <div class="stor" id="stor"></div>
   </section>
 
   <section id="tab-history" hidden>
@@ -777,7 +835,9 @@ function toast(msg, err) {
 /* Tabs */
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
   document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
-  ["inbox","files","history","settings"].forEach(t => $("#tab-" + t).hidden = t !== b.dataset.tab);
+  ["inbox","files","storage","history","settings"].forEach(t => $("#tab-" + t).hidden = t !== b.dataset.tab);
+  clearTimeout(storTimer);
+  if (b.dataset.tab === "storage") loadStorage();
   if (b.dataset.tab === "history") loadHistory();
   if (b.dataset.tab === "settings") { loadSettings(); loadUsers(); }
   if (b.dataset.tab === "files") loadFiles();
@@ -1424,6 +1484,102 @@ $("#hookoff").onclick = async () => {
 $("#hookclose").onclick = () => $("#hookscrim").hidden = true;
 $("#hook_x").onclick = () => $("#hookscrim").hidden = true;
 $("#hookscrim").onclick = e => { if (e.target === $("#hookscrim")) $("#hookscrim").hidden = true; };
+
+/* Speicher */
+let storTimer = null, storData = null;
+const STOR_COLOR = {movies: "var(--c-movies)", series: "var(--c-series)", anime: "var(--c-anime)", trash: "var(--c-trash)"};
+const storColor = k => STOR_COLOR[k] || "var(--c-dl)";
+const fmtCap = n => {
+  if (n == null) return "–";
+  const f = (v, d) => v.toFixed(d).replace(".", ",");
+  if (n >= 1e12) return f(n / 1e12, n >= 1e13 ? 1 : 2) + " TB";
+  if (n >= 1e9) return f(n / 1e9, n >= 1e11 ? 0 : 1) + " GB";
+  if (n >= 1e6) return Math.round(n / 1e6) + " MB";
+  return n > 0 ? Math.max(1, Math.round(n / 1e3)) + " KB" : "0 GB";
+};
+function fmtLeft(days) {
+  if (days == null) return null;
+  if (days > 3650) return "mehr als 10 Jahre";
+  if (days >= 60) { const m = Math.round(days / 30.4); return m >= 24 ? `ca. ${Math.round(days / 365)} Jahre` : `ca. ${m} Monate`; }
+  if (days >= 14) return `ca. ${Math.round(days / 7)} Wochen`;
+  return `ca. ${Math.max(1, Math.round(days))} ${Math.round(days) === 1 ? "Tag" : "Tage"}`;
+}
+async function loadStorage(force) {
+  clearTimeout(storTimer);
+  try {
+    if (force) await api("/api/storage/refresh", {method: "POST"});
+    storData = await api("/api/storage");
+    renderStorage();
+    // Solange im Hintergrund eingelesen wird, regelmäßig nachfragen
+    if (storData.running && !$("#tab-storage").hidden) storTimer = setTimeout(() => loadStorage(), 2500);
+  } catch (e) { toast(e.message, true); }
+}
+function openArea(key, path) {
+  fstate.root = key; fstate.path = path || "";
+  document.querySelector('nav button[data-tab="files"]').click();
+}
+function renderStorage() {
+  const d = storData, el = $("#stor");
+  const disk = (d.disks || []).reduce((a, x) => ({total: a.total + x.total, used: a.used + x.used, free: a.free + x.free}), {total: 0, used: 0, free: 0});
+  const areas = d.areas || [];
+  const scanning = d.running && !areas.length;
+  const pct = disk.total ? disk.used / disk.total : 0;
+  const ringCol = pct > .95 ? "var(--bad)" : pct > .85 ? "var(--warn)" : "var(--ok)";
+  const C = 2 * Math.PI * 62;
+  // Prognose mit der aktuellen freien Kapazität
+  const g = d.growth, perDay = g && g.bytes ? g.bytes / g.days : 0;
+  const left = perDay ? fmtLeft(disk.free / perDay) : null;
+  let sub = "", subCls = "";
+  if (pct > .95) { sub = "Fast voll – Zeit zum Aufräumen oder für eine neue Platte."; subCls = "bad"; }
+  else if (g && !scanning) {
+    sub = g.bytes ? `In den letzten ${g.days} Tagen kamen <b>${fmtCap(g.bytes)}</b> dazu.` : `In den letzten ${g.days} Tagen kam nichts dazu.`;
+    if (left) { sub += ` Bei dem Tempo reicht der Platz noch <b>${left}</b>.`; if (disk.free / perDay < 60) subCls = "warn"; }
+  }
+  const when = d.ts ? new Date(d.ts * 1000).toLocaleString("de-AT", {dateStyle: "short", timeStyle: "short"}) : null;
+
+  const hero = `<div class="card shero">
+    <div class="sring"><svg viewBox="0 0 148 148"><circle cx="74" cy="74" r="62" fill="none" stroke="var(--surface-3)" stroke-width="14"/>
+      <circle cx="74" cy="74" r="62" fill="none" stroke="${ringCol}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}" style="transition:stroke-dashoffset .8s var(--ease)"/></svg>
+      <div class="lbl"><b>${Math.round(pct * 100)}%</b><span>belegt</span></div></div>
+    <div><div class="sbig">${fmtCap(disk.free)} <small>frei von ${fmtCap(disk.total)}</small></div>
+      ${sub ? `<div class="ssub ${subCls}">${sub}</div>` : ""}
+      <div class="smeta">${d.running ? `<span><span class="spin"></span> Mediathek wird eingelesen …</span>` : when ? `<span>Stand ${when}${d.duration != null ? ` · ${String(d.duration).replace(".", ",")} s` : ""}</span>` : ""}
+        <button class="btn small ghost" id="storre" type="button" ${d.running ? "disabled" : ""}>↻ Neu einlesen</button></div></div></div>`;
+  if (!disk.total && !areas.length) { el.innerHTML = hero; bindStor(); return; }
+
+  // Aufteilung des belegten Platzes
+  const segs = areas.filter(a => a.size > 0).map(a => ({key: a.key, name: a.name, size: a.size, col: storColor(a.key)}));
+  const other = Math.max(0, disk.used - (d.tracked || 0));
+  if (areas.length && other > disk.total * .002) segs.push({key: "other", name: "Andere Daten am Server", size: other, col: "var(--c-other)"});
+  const bar = `<div class="card"><h2>Aufteilung</h2>
+    <div class="sbar">${segs.map(x => `<i style="width:${(x.size / Math.max(disk.total, segs.reduce((a, y) => a + y.size, 0) + disk.free) * 100).toFixed(2)}%;background:${x.col}" title="${esc(x.name)}: ${fmtCap(x.size)}"></i>`).join("")}</div>
+    <div class="slegend">${segs.map(x => `<div><i style="background:${x.col}"></i>${esc(x.name)}<b>${fmtCap(x.size)}</b></div>`).join("")}
+      <div><i style="background:var(--surface-3)"></i>Frei<b>${fmtCap(disk.free)}</b></div></div></div>`;
+
+  const cards = `<div class="scards">${(scanning ? [{name: "Filme"}, {name: "Serien"}, {name: "Downloads"}] : areas).map(a => {
+    if (scanning) return `<div class="scard"><div class="h">${esc(a.name)}</div><div class="v skel">000 GB</div><div class="d skel">wird gezählt</div></div>`;
+    let det;
+    if (!a.exists) det = "Ordner nicht gefunden";
+    else if (a.library) det = `${a.titles} ${a.key === "movies" ? (a.titles === 1 ? "Film" : "Filme") : (a.titles === 1 ? "Serie" : "Serien")} · ${a.videos} Videos` + (a.recent ? `<br><span class="up">+${fmtCap(a.recent)}</span> in ${g.days} Tagen` : "");
+    else if (a.key === "trash") det = a.files ? `${a.files} ${a.files === 1 ? "Datei" : "Dateien"} – wird automatisch geleert` : "Leer";
+    else det = (a.linked ? `Zusätzlich ${fmtCap(a.linked)} als Hardlink<br>(belegt keinen Extra-Platz)` : `${a.files} ${a.files === 1 ? "Datei" : "Dateien"}`);
+    return `<button class="scard" type="button" data-k="${esc(a.key)}"><div class="h"><i style="background:${storColor(a.key)}"></i>${esc(a.name)}</div>
+      <div class="v">${a.exists ? fmtCap(a.size) : "–"}</div><div class="d">${det}</div></button>`;
+  }).join("")}</div>`;
+
+  const top = d.top || [], max = top[0]?.size || 1;
+  const tops = top.length ? `<div class="card stop"><h2>Größte Titel</h2>${top.map(t => `<div class="strow" data-k="${esc(t.area)}" data-p="${esc(t.name)}">
+      <div class="nm">${esc(t.name.replace(/\s*\{(tmdb|tvdb|imdb)-[^}]*\}/g, ""))}</div><div class="sz">${fmtCap(t.size)}</div>
+      <div class="tb"><span>${esc(t.area_name)}</span><div><i style="width:${(t.size / max * 100).toFixed(1)}%;background:${storColor(t.area)}"></i></div></div></div>`).join("")}</div>` : "";
+
+  el.innerHTML = hero + (disk.total ? bar : "") + cards + tops;
+  bindStor();
+}
+function bindStor() {
+  const re = $("#storre"); if (re) re.onclick = () => loadStorage(true);
+  $("#stor").querySelectorAll(".scard[data-k]").forEach(b => b.onclick = () => openArea(b.dataset.k, ""));
+  $("#stor").querySelectorAll(".strow").forEach(r => r.onclick = () => openArea(r.dataset.k, r.dataset.p));
+}
 
 /* Dateien */
 let fstate = {root: null, path: "", data: null, roots: [], trash: null};

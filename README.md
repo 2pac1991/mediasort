@@ -45,6 +45,7 @@ Jede Änderung auf `main` baut automatisch ein neues Image (`ghcr.io/2pac1991/me
 - Mit JDownloader wird nicht geseedet. Wenn der Download-Ordner nicht voll bleiben soll, ist „Verschieben" die bessere Aktion.
 - Anmeldung: Beim ersten Aufruf legst du ein Admin-Konto an. In den Einstellungen unter „Nutzer" bekommt jeder Freund ein eigenes Konto, wahlweise mit Löschrecht. Ist `UI_PASSWORD` gesetzt, wird es beim Anlegen des ersten Admins als Setup-Code abgefragt.
 - Dateien: Im Reiter „Dateien" lassen sich Downloads, Filme, Serien und Anime durchsuchen, umbenennen und löschen. Gelöschtes landet im Papierkorb (`/data/.mediasort-papierkorb`) und wird nach 14 Tagen endgültig entfernt.
+- Speicher: Der Reiter „Speicher" zeigt, wie viel Platz auf dem Server noch frei ist, wie er sich auf Filme, Serien, Anime, Downloads und Papierkorb aufteilt, die größten Titel und wie lange der Platz beim aktuellen Tempo noch reicht. Hardlinks werden nur einmal gezählt. Eingelesen wird im Hintergrund, spätestens alle 30 Minuten neu.
 - Webhook-Daten: `{"count": 2, "files": ["Dark (2017) - s02e03 - Geister.mkv", ...]}`
 
 ## Benachrichtigung in Home Assistant (für alle Nutzer)

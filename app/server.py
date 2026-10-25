@@ -9,9 +9,9 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import config, db, files, library, links, myjd, renamer, service, tmdb, users
+from . import config, db, files, library, links, myjd, renamer, service, storage, tmdb, users
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 STATIC = os.path.join(os.path.dirname(__file__), "static")
 # Früherer Einzel-Passwortschutz: wenn gesetzt, muss er beim Anlegen des ersten Admins angegeben werden
 SETUP_CODE = os.environ.get("UI_PASSWORD", "")
@@ -160,6 +160,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, myjd.uhd_packages() if myjd.configured() else [])
                 except myjd.MyJDError as e:
                     raise ValueError(str(e)) from e
+            if u.path == "/api/storage":
+                return self._send(200, storage.get())
             if u.path == "/api/trash":
                 return self._send(200, {"items": files.list_trash(), "days": config.get().get("trash_days")})
             if u.path == "/api/status":
@@ -313,6 +315,8 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/files/rename":
                 name = files.rename(body.get("root", ""), body.get("path", ""), body.get("name"), self.me["name"])
                 return self._send(200, {"ok": True, "name": name})
+            if u.path == "/api/storage/refresh":
+                return self._send(200, {"started": storage.refresh()})
             if u.path == "/api/trash/restore":
                 return self._send(200, {"ok": True, "path": files.restore(int(body["id"]))})
             if u.path == "/api/trash/purge":
