@@ -644,7 +644,7 @@ details summary{cursor:pointer}
       <summary style="cursor:pointer;font-weight:600">Click'n'Load am Handy einrichten</summary>
       <p class="hint" style="color:var(--muted)">Einmalig ein Lesezeichen anlegen. Danach auf jeder Seite mit Click'n'Load-Knopf das Lesezeichen antippen, Mediasort öffnet sich mit den Links.</p>
       <div class="inline"><input type="text" id="cnlcode" readonly><button class="btn small" type="button" id="cnlcopy">Code kopieren</button></div>
-      <p class="hint" style="color:var(--muted);margin-top:10px"><b>Android-App:</b> Mit der Mediasort-App (Konto-Menü → „Android-App laden“) braucht ihr kein Lesezeichen: Die App empfängt Click'n'Load wie der JDownloader am PC. Einfach im Browser auf der Download-Seite auf <b>Click'n'Load</b> tippen.</p>
+      <p class="hint" style="color:var(--muted);margin-top:10px"><b>Android-App:</b> Mit der Mediasort-App (Konto-Menü → „Android-App laden“) braucht ihr kein Lesezeichen: Die Download-Seite (z. B. filecrypt) in Chrome über <b>Teilen → Mediasort</b> schicken. Sie öffnet sich im eingebauten Browser der App: Captcha lösen, auf <b>Click'n'Load</b> tippen, die Links gehen direkt an den JDownloader.</p>
       <p class="hint" style="color:var(--muted);margin-top:10px"><b>iPhone (Safari):</b> 1. Diese Seite als Lesezeichen sichern (Teilen → Lesezeichen hinzufügen), Name <b>Mediasort CNL</b>. 2. Lesezeichen öffnen → Bearbeiten → das Lesezeichen antippen und die Adresse durch den kopierten Code ersetzen. 3. Auf einer Download-Seite: Lesezeichen → <b>Mediasort CNL</b>.</p>
       <p class="hint" style="color:var(--muted)"><b>Android (Chrome):</b> 1. Menü ⋮ → ☆ (Lesezeichen), dann Bearbeiten: Name <b>Mediasort CNL</b>, als URL den kopierten Code einfügen. 2. Auf einer Download-Seite in die Adressleiste <b>Mediasort CNL</b> tippen und den Lesezeichen-Vorschlag antippen.</p>
     </details>
@@ -1031,9 +1031,18 @@ function openLinks(prefill) {
 }
 function countLinks() {
   const n = new Set($("#lk_text").value.match(linkRe) || []).size;
-  const prot = protectorLinks($("#lk_text").value);
-  $("#lk_count").innerHTML = (n ? `${n} ${n === 1 ? "Link" : "Links"} erkannt` : "") + (prot.length
-    ? `<br><span style="color:var(--bad)">⚠️ ${prot.length === 1 ? "Ein Link führt" : prot.length + " Links führen"} zu einer Schutzseite. JDownloader kann deren Captcha meist nicht lösen. Besser: Seite im Browser öffnen, Captcha lösen und dann das Lesezeichen „Mediasort CNL“ antippen.</span>` : "");
+  const all = protectorLinks($("#lk_text").value);
+  const helper = all.filter(u => /\/helper\.html?/i.test(u));
+  const prot = all.filter(u => !helper.includes(u));
+  const inApp = /MediasortApp/.test(navigator.userAgent);
+  const pages = prot.map(u => `<br><a href="${esc(u)}" style="color:var(--accent,#F5B83D)">↗ ${esc(u.replace(/^https?:\/\//, "").slice(0, 50))}</a>`).join("");
+  $("#lk_count").innerHTML = (n ? `${n} ${n === 1 ? "Link" : "Links"} erkannt` : "")
+    + (helper.length ? `<br><span style="color:var(--bad)">⚠️ Das ist nur das Click'n'Load-Hilfsfenster von filecrypt, darin stecken keine Links. ${inApp
+        ? "Teile stattdessen die Ordner-Seite (filecrypt.cc/Container/…) mit Mediasort. Sie öffnet sich dann in der App: Captcha lösen, Click'n'Load antippen, fertig."
+        : "Öffne die Ordner-Seite (filecrypt.cc/Container/…), löse das Captcha und tippe dann das Lesezeichen „Mediasort CNL“ an."}</span>` : "")
+    + (prot.length ? `<br><span style="color:var(--bad)">⚠️ ${prot.length === 1 ? "Ein Link führt" : prot.length + " Links führen"} zu einer Schutzseite. JDownloader kann deren Captcha meist nicht lösen. ${inApp
+        ? "Besser: Seite antippen, sie öffnet sich in der App. Dort Captcha lösen und Click'n'Load antippen."
+        : "Besser: Seite im Browser öffnen, Captcha lösen und dann das Lesezeichen „Mediasort CNL“ antippen."}</span>${inApp ? pages : ""}` : "");
 }
 let jdLive = false;
 async function loadLinkHist() {
@@ -1249,7 +1258,7 @@ function wireJd() {
     // Seite im eigenen Browser öffnen; nach dem Senden per Lesezeichen wird dieses Paket gelöscht
     try { await api("/api/jd/pending", {method: "POST", body: {kind: jdTab, uuid: b.dataset.uuid, name: b.dataset.name}}); } catch (e) {}
     window.open(b.dataset.web, "_blank", "noopener");
-    toast("Captcha lösen, dann Lesezeichen „Mediasort CNL“ antippen");
+    toast(/MediasortApp/.test(navigator.userAgent) ? "Captcha lösen, dann Click'n'Load antippen" : "Captcha lösen, dann Lesezeichen „Mediasort CNL“ antippen");
   });
   root.querySelectorAll("[data-start]").forEach(b => b.onclick = async () => {
     b.disabled = true;

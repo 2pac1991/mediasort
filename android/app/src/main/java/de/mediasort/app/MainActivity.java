@@ -33,6 +33,26 @@ import android.widget.TextView;
 public class MainActivity extends Activity {
     static final String DEFAULT_URL = "https://mediasort.tail780db.ts.net";
     static final String TAILSCALE = "com.tailscale.ipn";
+    // Linkschutz-Seiten öffnen im eingebauten Browser, dort wird Click'n'Load direkt abgefangen
+    static final java.util.regex.Pattern PROTECTORS = java.util.regex.Pattern.compile(
+            "(^|\\.)(filecrypt\\.(cc|co|to)|linkcrypt\\.ws|keeplinks\\.(org|co)|safelinking\\.net|ncrypt\\.in|share-links\\.biz|hide\\.cx|links\\.snahp\\.it|relink\\.(us|to)|dir\\.cr|protect-links\\.net|linksafe\\.cc)$",
+            java.util.regex.Pattern.CASE_INSENSITIVE);
+    static final java.util.regex.Pattern URL_RE = java.util.regex.Pattern.compile("https?://[^\\s<>\"'`]+", java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    static boolean isProtector(Uri u) {
+        return u != null && u.getHost() != null && PROTECTORS.matcher(u.getHost()).find();
+    }
+
+    /** Erste geteilte Schutzseite, aber nicht filecrypts Hilfsfenster (das enthält keine Links). */
+    static String protectorPage(String text) {
+        java.util.regex.Matcher m = URL_RE.matcher(text);
+        while (m.find()) {
+            Uri u = Uri.parse(m.group());
+            String path = u.getPath() == null ? "" : u.getPath();
+            if (isProtector(u) && !path.contains("helper.htm")) return m.group();
+        }
+        return null;
+    }
 
     private WebView web;
     private View errorView;
@@ -121,6 +141,13 @@ public class MainActivity extends Activity {
             String text = intent.getStringExtra(Intent.EXTRA_TEXT);
             String subject = intent.getStringExtra(Intent.EXTRA_SUBJECT);
             String shared = ((subject != null ? subject + "\n" : "") + (text != null ? text : "")).trim();
+            String page = shared.isEmpty() ? null : protectorPage(shared);
+            if (page != null) {
+                // Schutzseite gleich im eingebauten Browser öffnen: Captcha lösen, Click'n'Load tippen
+                load(url);
+                CnlBrowserActivity.open(this, page);
+                return;
+            }
             if (!shared.isEmpty()) url = base() + "/share?text=" + Uri.encode(shared);
         }
         load(url);
@@ -193,6 +220,10 @@ public class MainActivity extends Activity {
             Uri u = request.getUrl();
             String scheme = u.getScheme() == null ? "" : u.getScheme();
             if ((scheme.equals("http") || scheme.equals("https")) && isOwn(u)) return false;
+            if (isProtector(u) && !(u.getPath() != null && u.getPath().contains("helper.htm"))) {
+                CnlBrowserActivity.open(MainActivity.this, u.toString());
+                return true;
+            }
             // Fremde Seiten (Download-Seiten, Home Assistant, Tailscale ...) im Browser bzw. in der passenden App
             openExternal(u);
             return true;

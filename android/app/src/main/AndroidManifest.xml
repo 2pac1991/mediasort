@@ -38,6 +38,14 @@
             </intent-filter>
         </activity>
 
+        <!-- Eingebauter Browser für Schutzseiten (filecrypt & Co.) mit Click'n'Load -->
+        <activity
+            android:name=".CnlBrowserActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Click'n'Load-Empfänger auf 127.0.0.1:9666, wie der JDownloader am PC -->
         <service
             android:name=".CnlService"

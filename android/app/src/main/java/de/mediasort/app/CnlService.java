@@ -11,19 +11,15 @@ import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
-import android.webkit.CookieManager;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -206,52 +202,13 @@ public class CnlService extends Service {
 
     // ---------- Weiter an Mediasort ----------
     private void forward(Map<String, String> form) {
-        String base = MainActivity.baseUrl(this);
         try {
-            JSONObject req = new JSONObject();
-            for (String k : new String[]{"crypted", "jk", "urls", "package"}) {
-                if (form.containsKey(k)) req.put(k, form.get(k));
-            }
-            JSONObject dec = post(base + "/api/cnl/decode", req);
-            JSONArray urls = dec.getJSONArray("urls");
-            StringBuilder text = new StringBuilder();
-            for (int i = 0; i < urls.length(); i++) text.append(urls.getString(i)).append('\n');
-            String pkg = dec.optString("package", "");
-            JSONObject send = new JSONObject().put("text", text.toString()).put("package", pkg);
-            JSONObject res = post(base + "/api/links", send);
-            int n = res.optInt("count", urls.length());
-            notifyResult("An JDownloader gesendet", (pkg.isEmpty() ? "" : pkg + " · ") + n + (n == 1 ? " Link" : " Links"), "/?jd=grabber");
+            CnlForwarder.Result r = CnlForwarder.send(this, new JSONObject(form));
+            notifyResult("An JDownloader gesendet", r.text(), "/?jd=grabber");
         } catch (Exception e) {
             String msg = e.getMessage() == null ? e.toString() : e.getMessage();
             notifyResult("Click'n'Load fehlgeschlagen", msg, "/");
         }
-    }
-
-    private JSONObject post(String url, JSONObject body) throws Exception {
-        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
-        c.setConnectTimeout(15000);
-        c.setReadTimeout(30000);
-        c.setRequestMethod("POST");
-        c.setDoOutput(true);
-        c.setRequestProperty("Content-Type", "application/json");
-        // Anmeldung der App (gleiches Cookie wie in der Oberfläche)
-        String cookie = CookieManager.getInstance().getCookie(url);
-        if (cookie != null) c.setRequestProperty("Cookie", cookie);
-        try (OutputStream o = c.getOutputStream()) {
-            o.write(body.toString().getBytes(StandardCharsets.UTF_8));
-        }
-        int code = c.getResponseCode();
-        InputStream in = code < 400 ? c.getInputStream() : c.getErrorStream();
-        ByteArrayOutputStream buf = new ByteArrayOutputStream();
-        if (in != null) {
-            byte[] b = new byte[8192];
-            int r;
-            while ((r = in.read(b)) > 0) buf.write(b, 0, r);
-        }
-        JSONObject res = buf.size() > 0 ? new JSONObject(buf.toString("UTF-8")) : new JSONObject();
-        if (code == 401) throw new Exception("Bitte erst in der Mediasort-App anmelden");
-        if (code >= 400) throw new Exception(res.optString("error", "Fehler " + code));
-        return res;
     }
 
     private void notifyResult(String title, String text, String path) {
