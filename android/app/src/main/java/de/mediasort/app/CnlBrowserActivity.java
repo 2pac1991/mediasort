@@ -62,6 +62,16 @@ public class CnlBrowserActivity extends Activity {
     private String lastData = "";
     private long lastTime = 0;
     private boolean busy = false;
+    // Werbeblocker: nur Schutzseite, Captcha-Anbieter und gängige CDNs dürfen laden
+    private volatile boolean adblock = true;
+    private int blocked = 0;
+    private Button shield;
+    private final java.util.Set<WebView> pendingPopups = new java.util.HashSet<>();
+    static final String[] ALLOW = {
+            "cutcaptcha.net", "cutcaptcha.com", "gstatic.com", "recaptcha.net", "hcaptcha.com",
+            "challenges.cloudflare.com", "cdnjs.cloudflare.com", "jsdelivr.net", "jquery.com",
+            "bootstrapcdn.com", "fonts.googleapis.com", "ajax.googleapis.com", "fontawesome.com", "unpkg.com"
+    };
 
     static void open(Context ctx, String url) {
         Intent i = new Intent(ctx, CnlBrowserActivity.class).putExtra(EXTRA_URL, url);
@@ -141,6 +151,7 @@ public class CnlBrowserActivity extends Activity {
     private void closeTop() {
         if (views.size() <= 1) return;
         WebView w = views.remove(views.size() - 1);
+        pendingPopups.remove(w);
         stack.removeView(w);
         w.destroy();
     }
@@ -174,9 +185,27 @@ public class CnlBrowserActivity extends Activity {
 
     private class Client extends WebViewClient {
         private final boolean lateHook;
+        volatile String pageHost = "";
 
         Client(boolean lateHook) {
             this.lateHook = lateHook;
+        }
+
+        /** Pop-up erst zeigen, wenn klar ist, wohin es geht: Werbe-Pop-ups gleich wieder schließen. */
+        private boolean checkPopup(WebView view, Uri u) {
+            if (!pendingPopups.contains(view)) return false;
+            String scheme = u.getScheme() == null ? "" : u.getScheme();
+            if (scheme.equals("about")) return false;
+            pendingPopups.remove(view);
+            if (!adblock || MainActivity.isProtector(u)) {
+                stack.addView(view, new FrameLayout.LayoutParams(-1, -1));
+                return false;
+            }
+            countBlocked();
+            views.remove(view);
+            view.stopLoading();
+            ui.post(view::destroy);
+            return true;
         }
 
         @Override
@@ -184,12 +213,21 @@ public class CnlBrowserActivity extends Activity {
             Uri u = request.getUrl();
             String scheme = u.getScheme() == null ? "" : u.getScheme();
             if (isLocalCnl(u)) return true; // Formular, das als Seite zum JDownloader springen will
+            if (checkPopup(view, u)) return true;
+            // Werbe-Weiterleitungen der Hauptseite verhindern
+            if (adblock && request.isForMainFrame() && !allowed(u, pageHost)) {
+                countBlocked();
+                return true;
+            }
             // Fremde Apps (intent:, market: ...) aus Werbung nicht öffnen
             return !(scheme.equals("http") || scheme.equals("https") || scheme.equals("about") || scheme.equals("blob") || scheme.equals("data"));
         }
 
         @Override
         public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+            Uri pu = Uri.parse(url);
+            if (checkPopup(view, pu)) return;
+            if (pu.getHost() != null) pageHost = pu.getHost();
             if (lateHook) view.evaluateJavascript(hook, null);
             if (view == views.get(0)) title.setText(Uri.parse(url).getHost());
         }
@@ -203,7 +241,13 @@ public class CnlBrowserActivity extends Activity {
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
             Uri u = request.getUrl();
-            if (!isLocalCnl(u)) return null;
+            if (!isLocalCnl(u)) {
+                if (!adblock || allowed(u, pageHost) || request.isForMainFrame()) return null;
+                countBlocked();
+                Map<String, String> ch = new HashMap<>();
+                ch.put("Access-Control-Allow-Origin", "*");
+                return new WebResourceResponse("text/plain", "utf-8", 200, "OK", ch, new ByteArrayInputStream(new byte[0]));
+            }
             // Wie der JDownloader antworten (z. B. jdcheck.js, damit der Click'n'Load-Knopf erscheint)
             String path = u.getPath() == null ? "/" : u.getPath();
             String type = "text/plain", body = "";
@@ -241,8 +285,9 @@ public class CnlBrowserActivity extends Activity {
         @Override
         public boolean onCreateWindow(WebView view, boolean isDialog, boolean userGesture, Message resultMsg) {
             WebView child = newWebView();
-            stack.addView(child, new FrameLayout.LayoutParams(-1, -1));
             views.add(child);
+            if (adblock) pendingPopups.add(child); // erst sichtbar, wenn es keine Werbung ist
+            else stack.addView(child, new FrameLayout.LayoutParams(-1, -1));
             WebView.WebViewTransport t = (WebView.WebViewTransport) resultMsg.obj;
             t.setWebView(child);
             resultMsg.sendToTarget();
@@ -254,6 +299,7 @@ public class CnlBrowserActivity extends Activity {
             int i = views.indexOf(window);
             if (i > 0) {
                 views.remove(i);
+                pendingPopups.remove(window);
                 stack.removeView(window);
                 window.destroy();
             }
@@ -264,6 +310,38 @@ public class CnlBrowserActivity extends Activity {
             progress.setProgress(p);
             progress.setVisibility(p >= 100 ? View.INVISIBLE : View.VISIBLE);
         }
+    }
+
+    static String baseDomain(String host) {
+        if (host == null) return "";
+        String[] p = host.toLowerCase(java.util.Locale.ROOT).split("\\.");
+        return p.length <= 2 ? host.toLowerCase(java.util.Locale.ROOT) : p[p.length - 2] + "." + p[p.length - 1];
+    }
+
+    static boolean hostIn(String host, String domain) {
+        host = host == null ? "" : host.toLowerCase(java.util.Locale.ROOT);
+        return host.equals(domain) || host.endsWith("." + domain);
+    }
+
+    /** Darf diese Adresse laden? Schutzseite selbst, die gerade offene Seite, Captchas und CDNs ja, Werbung nein. */
+    static boolean allowed(Uri u, String pageHost) {
+        String host = u.getHost();
+        if (host == null) return true; // data:, blob: ...
+        String scheme = u.getScheme() == null ? "" : u.getScheme();
+        if (!scheme.equals("http") && !scheme.equals("https")) return true;
+        if (isLocalCnl(u) || MainActivity.isProtector(u)) return true;
+        if (pageHost != null && !pageHost.isEmpty() && baseDomain(host).equals(baseDomain(pageHost))) return true;
+        for (String d : ALLOW) if (hostIn(host, d)) return true;
+        // Google nur für das Captcha, nicht für Werbung
+        String path = u.getPath() == null ? "" : u.getPath();
+        return (hostIn(host, "google.com") || hostIn(host, "recaptcha.net")) && path.startsWith("/recaptcha");
+    }
+
+    private void countBlocked() {
+        ui.post(() -> {
+            blocked++;
+            if (shield != null) shield.setText("🛡 " + blocked);
+        });
     }
 
     static boolean isLocalCnl(Uri u) {
@@ -341,6 +419,19 @@ public class CnlBrowserActivity extends Activity {
         title.setSingleLine(true);
         title.setPadding(dp(10), 0, dp(10), 0);
         bar.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+
+        shield = smallButton("🛡 0", false);
+        shield.setOnClickListener(v -> {
+            adblock = !adblock;
+            blocked = 0;
+            shield.setText(adblock ? "🛡 0" : "🛡 aus");
+            Toast.makeText(this, adblock ? "Werbeblocker an" : "Werbeblocker aus (z. B. wenn das Captcha nicht lädt)", Toast.LENGTH_SHORT).show();
+            WebView w = top();
+            if (w != null) w.reload();
+        });
+        bar.addView(shield, new LinearLayout.LayoutParams(-2, dp(40)));
+        android.widget.Space gap = new android.widget.Space(this);
+        bar.addView(gap, new LinearLayout.LayoutParams(dp(6), 1));
 
         Button grab = smallButton("Links holen", true);
         grab.setOnClickListener(v -> scan());
