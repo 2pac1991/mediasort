@@ -349,7 +349,7 @@ public class CnlBrowserActivity extends Activity {
         return u.getPort() == 9666 && (host.equals("127.0.0.1") || host.equals("localhost") || host.equals("[::1]") || host.equals("::1"));
     }
 
-    // ---------- Daten an Mediasort ----------
+    // ---------- Daten an Saugmeister ----------
     private class Bridge {
         @JavascriptInterface
         public void send(String json) {

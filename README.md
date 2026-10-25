@@ -1,4 +1,4 @@
-# Mediasort
+# Saugmeister
 
 Eigener FileBot-Ersatz für Unraid: erkennt Filme, Serien und Anime über TMDB und sortiert sie im Plex-Schema ein. Ohne Lizenz, ohne externe Abhängigkeiten (nur Python-Standardbibliothek).
 
@@ -19,13 +19,13 @@ Eigener FileBot-Ersatz für Unraid: erkennt Filme, Serien und Anime über TMDB u
 **1. Vorlage holen** (Unraid → Terminal)
 
 ```sh
-wget -O /boot/config/plugins/dockerMan/templates-user/my-Mediasort.xml \
-  https://raw.githubusercontent.com/2pac1991/mediasort/main/unraid/my-Mediasort.xml
+wget -O /boot/config/plugins/dockerMan/templates-user/my-Saugmeister.xml \
+  https://raw.githubusercontent.com/2pac1991/mediasort/main/unraid/my-Saugmeister.xml
 ```
 
 **2. Container anlegen**
 
-Docker → Container hinzufügen → Vorlage „Mediasort" wählen → Übernehmen.
+Docker → Container hinzufügen → Vorlage „Saugmeister" wählen → Übernehmen.
 Wichtig ist der eine gemeinsame Mount `/mnt/user/Plex → /data`: Downloads und Mediathek müssen im selben Mount liegen, sonst gehen keine Hardlinks.
 
 **3. Einrichten** (Web-Oberfläche auf Port 8484)
@@ -55,22 +55,22 @@ Jeder Nutzer kann sich in seinem eigenen Home Assistant benachrichtigen lassen, 
    `https://github.com/2pac1991/mediasort/blob/main/homeassistant/mediasort-benachrichtigung.yaml`
 2. Aus der Vorlage eine Automation erstellen: eine zufällige **Webhook-ID** ausdenken (z. B. `mediasort-x7k2p9q4m1`) und das **Handy** auswählen.
 3. Die Webhook-Adresse zusammensetzen: `https://<eigene Home-Assistant-Adresse>/api/webhook/<Webhook-ID>`. Mit Home Assistant Cloud steht die Adresse unter **Einstellungen → Home Assistant Cloud → Webhooks**.
-4. In Mediasort beim eigenen Namen auf **🔔** tippen, die Adresse einfügen und den Test senden.
+4. In Saugmeister beim eigenen Namen auf **🔔** tippen, die Adresse einfügen und den Test senden.
 
-Mediasort braucht dafür Zugang zum Internet bzw. zur Home-Assistant-Adresse des Freundes.
+Saugmeister braucht dafür Zugang zum Internet bzw. zur Home-Assistant-Adresse des Freundes.
 
 ## Links an JDownloader senden
 
-Nutzer mit dem Recht „Darf Links senden" können im Eingang über **＋ Links senden** Links an JDownloader schicken (auf Android auch über **Teilen → Mediasort**). Mediasort legt dafür eine `.crawljob`-Datei in einen Ordner, den JDownloader überwacht.
+Nutzer mit dem Recht „Darf Links senden" können im Eingang über **＋ Links senden** Links an JDownloader schicken (auf Android auch über **Teilen → Saugmeister**). Saugmeister legt dafür eine `.crawljob`-Datei in einen Ordner, den JDownloader überwacht.
 
-**Am einfachsten über My.JDownloader:** In Mediasort unter **Einstellungen → JDownloader** E-Mail und Passwort deines My.JDownloader-Kontos eintragen und **Verbinden & testen** drücken. Mediasort schickt die Links dann direkt an deinen JDownloader (wie die Handy-Apps), es ist nichts weiter einzurichten.
+**Am einfachsten über My.JDownloader:** In Saugmeister unter **Einstellungen → JDownloader** E-Mail und Passwort deines My.JDownloader-Kontos eintragen und **Verbinden & testen** drücken. Saugmeister schickt die Links dann direkt an deinen JDownloader (wie die Handy-Apps), es ist nichts weiter einzurichten.
 
 Alternativ ohne My.JDownloader über einen überwachten Ordner:
 1. In JDownloader (Weboberfläche des Containers) unter **Einstellungen → Erweiterungen** die Erweiterung **Folder Watch** aktivieren.
 2. Unter **Einstellungen → Erweiterte Einstellungen** nach `FolderWatch` suchen und bei **Folders** den Ordner eintragen, z. B. `["/output/.mediasort-links"]` (so sieht ihn der JDownloader-Container).
 3. Den Ordner anlegen: `/mnt/user/Plex/Downloads/.mediasort-links`.
-4. In Mediasort unter **Einstellungen → JDownloader** denselben Ordner so eintragen, wie Mediasort ihn sieht: `/data/Downloads/.mediasort-links`.
+4. In Saugmeister unter **Einstellungen → JDownloader** denselben Ordner so eintragen, wie Saugmeister ihn sieht: `/data/Downloads/.mediasort-links`.
 
 ## Click'n'Load am Handy
 
-Im Fenster **＋ Links senden** gibt es unter **Click'n'Load am Handy einrichten** ein Lesezeichen (Bookmarklet). Auf einer Seite mit Click'n'Load-Knopf das Lesezeichen antippen: Es liest die verschlüsselten CNL-Daten (`crypted`, `jk`) der Seite aus, Mediasort entschlüsselt sie und zeigt die Links zum Senden an. Das JavaScript aus `jk` wird dabei nie ausgeführt, nur der Schlüssel wird herausgelesen. Findet das Lesezeichen keinen Click'n'Load-Knopf, werden die Links der Seite zur Auswahl eingefügt.
+Im Fenster **＋ Links senden** gibt es unter **Click'n'Load am Handy einrichten** ein Lesezeichen (Bookmarklet). Auf einer Seite mit Click'n'Load-Knopf das Lesezeichen antippen: Es liest die verschlüsselten CNL-Daten (`crypted`, `jk`) der Seite aus, Saugmeister entschlüsselt sie und zeigt die Links zum Senden an. Das JavaScript aus `jk` wird dabei nie ausgeführt, nur der Schlüssel wird herausgelesen. Findet das Lesezeichen keinen Click'n'Load-Knopf, werden die Links der Seite zur Auswahl eingefügt.

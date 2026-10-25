@@ -1,4 +1,4 @@
-// Mediasort: fängt Click'n'Load in der Seite ab (fetch, XHR, Formulare, Beacons an 127.0.0.1:9666)
+// Saugmeister: fängt Click'n'Load in der Seite ab (fetch, XHR, Formulare, Beacons an 127.0.0.1:9666)
 // und gibt die Daten an die App weiter. Die Seite bekommt dieselbe Antwort wie vom JDownloader.
 (function () {
   if (window.__mediasortCnl) return;

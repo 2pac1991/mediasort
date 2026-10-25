@@ -1,4 +1,4 @@
-"""Links an JDownloader übergeben: Mediasort legt eine .crawljob-Datei in den Ordner, den JDownloaders
+"""Links an JDownloader übergeben: Saugmeister legt eine .crawljob-Datei in den Ordner, den JDownloaders
 Erweiterung "Folder Watch" überwacht. JDownloader holt sie dort ab und startet den Download."""
 import base64
 import json
@@ -55,7 +55,7 @@ def send(text, package, user):
         "autoConfirm": "TRUE",
         "enabled": "TRUE",
         "forcedStart": "DEFAULT",
-        "comment": f"Von {user} über Mediasort",
+        "comment": f"Von {user} über Saugmeister",
     }
     if package:
         job["packageName"] = package

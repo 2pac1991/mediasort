@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Mediasort</title>
+<title>Saugmeister</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/png" href="/icon-192.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -11,12 +11,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Mediasort">
+<meta name="apple-mobile-web-app-title" content="Saugmeister">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* ===================== Mediasort Design ===================== */
+/* ===================== Saugmeister Design ===================== */
 :root{
   --bg:#0a0d12; --bg-2:#0f141b; --surface:#131922; --surface-2:#1a222d; --surface-3:#222c39;
   --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.12);
@@ -390,7 +390,7 @@ details summary{cursor:pointer}
 <body>
 <header>
   <div class="bar">
-    <div class="brand"><img src="icon.png" alt="">Mediasort <small id="ver"></small></div>
+    <div class="brand"><img src="icon.png" alt="">Saugmeister <small id="ver"></small></div>
     <div class="watch" id="watch"><span class="dot"></span><span>Watch-Ordner aus</span></div>
     <div class="me" id="me"></div>
   </div>
@@ -522,7 +522,7 @@ details summary{cursor:pointer}
         <label class="f" for="myjd_device">Gerät</label>
         <div class="inline"><select id="myjd_device" name="myjd_device"><option value="">Erstes gefundenes</option></select><button type="button" class="btn small" id="myjdtest">Verbinden &amp; testen</button></div>
         <details style="margin-top:14px"><summary class="hint" style="cursor:pointer;color:var(--muted)">Alternative ohne My.JDownloader: überwachter Ordner</summary>
-          <p class="hint">In JDownloader die Erweiterung <b>Folder Watch</b> aktivieren und bei <i>FolderWatch: Folders</i> z. B. <code>/output/.mediasort-links</code> eintragen. Hier denselben Ordner so eintragen, wie ihn Mediasort sieht.</p>
+          <p class="hint">In JDownloader die Erweiterung <b>Folder Watch</b> aktivieren und bei <i>FolderWatch: Folders</i> z. B. <code>/output/.mediasort-links</code> eintragen. Hier denselben Ordner so eintragen, wie ihn Saugmeister sieht.</p>
           <input type="text" id="jd_watch_dir" name="jd_watch_dir" placeholder="/data/Downloads/.mediasort-links">
         </details>
       </div>
@@ -604,7 +604,7 @@ details summary{cursor:pointer}
   <form id="authform" autocomplete="on">
     <img src="icon.png" alt="">
     <h1 id="authtitle">Anmelden</h1>
-    <p id="authhint">Melde dich mit deinem Mediasort-Konto an.</p>
+    <p id="authhint">Melde dich mit deinem Saugmeister-Konto an.</p>
     <label class="f" for="a_name">Name</label><input type="text" id="a_name" autocomplete="username" required>
     <label class="f" for="a_pw">Passwort</label><input type="password" id="a_pw" autocomplete="current-password" required>
     <div id="a_codewrap" hidden><label class="f" for="a_code">Setup-Code (UI_PASSWORD aus dem Container)</label><input type="password" id="a_code"></div>
@@ -623,7 +623,7 @@ details summary{cursor:pointer}
         <div class="hint">Öffnet deinen Home Assistant. Dort „Blueprint importieren“ bestätigen und anschließend <b>Automation erstellen</b>.</div></li>
       <li><b>Diese Webhook-ID in der Vorlage eintragen</b> und dein Handy auswählen
         <div class="inline" style="margin-top:8px"><input type="text" id="hookid" readonly><button class="btn small" type="button" id="hookcopy">Kopieren</button></div>
-        <div class="hint">Als Mediasort-Adresse kannst du <span id="hookself"></span> eintragen.</div></li>
+        <div class="hint">Als Saugmeister-Adresse kannst du <span id="hookself"></span> eintragen.</div></li>
       <li><b>Adresse deines Home Assistant</b>
         <input type="text" id="hookbase" placeholder="https://xyz.ui.nabu.casa" style="margin-top:8px" autocomplete="off">
         <div class="hint">Die Adresse, unter der dein Home Assistant von außen erreichbar ist. Mit Home Assistant Cloud kannst du stattdessen auch die Webhook-Adresse aus <i>Einstellungen → Home Assistant Cloud → Webhooks</i> einfügen.</div></li>
@@ -640,8 +640,8 @@ details summary{cursor:pointer}
 <div class="scrim" id="linkscrim" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="linkstitle">
     <div class="sheethead"><h2 id="linkstitle">Links an JDownloader senden</h2><button class="xbtn" type="button" id="lk_x" aria-label="Schließen">✕</button></div>
-    <p class="hint" style="color:var(--muted);margin:0">Links einfügen, auch ganze Nachrichten. Mediasort sucht die Links heraus, JDownloader lädt sie in den Download-Ordner, danach wird automatisch einsortiert.</p>
-    <p class="hint" id="lk_android" style="color:var(--muted);margin:8px 0 0" hidden>Tipp: Auf Android kannst du Links auch direkt über <b>Teilen → Mediasort</b> schicken.</p>
+    <p class="hint" style="color:var(--muted);margin:0">Links einfügen, auch ganze Nachrichten. Saugmeister sucht die Links heraus, JDownloader lädt sie in den Download-Ordner, danach wird automatisch einsortiert.</p>
+    <p class="hint" id="lk_android" style="color:var(--muted);margin:8px 0 0" hidden>Tipp: Auf Android kannst du Links auch direkt über <b>Teilen → Saugmeister</b> schicken.</p>
     <label class="f" for="lk_text">Links</label>
     <textarea id="lk_text" rows="6" placeholder="https://…"></textarea>
     <div class="hint" id="lk_count" style="color:var(--muted);font-size:13px;margin-top:4px"></div>
@@ -653,11 +653,11 @@ details summary{cursor:pointer}
     </div>
     <details class="cnlhelp" style="margin-top:22px">
       <summary style="cursor:pointer;font-weight:600">Click'n'Load am Handy einrichten</summary>
-      <p class="hint" style="color:var(--muted)">Einmalig ein Lesezeichen anlegen. Danach auf jeder Seite mit Click'n'Load-Knopf das Lesezeichen antippen, Mediasort öffnet sich mit den Links.</p>
+      <p class="hint" style="color:var(--muted)">Einmalig ein Lesezeichen anlegen. Danach auf jeder Seite mit Click'n'Load-Knopf das Lesezeichen antippen, Saugmeister öffnet sich mit den Links.</p>
       <div class="inline"><input type="text" id="cnlcode" readonly><button class="btn small" type="button" id="cnlcopy">Code kopieren</button></div>
-      <p class="hint" style="color:var(--muted);margin-top:10px"><b>Android-App:</b> Mit der Mediasort-App (Konto-Menü → „Android-App laden“) braucht ihr kein Lesezeichen: Die Download-Seite (z. B. filecrypt) in Chrome über <b>Teilen → Mediasort</b> schicken. Sie öffnet sich im eingebauten Browser der App: Captcha lösen, auf <b>Click'n'Load</b> tippen, die Links gehen direkt an den JDownloader.</p>
-      <p class="hint" style="color:var(--muted);margin-top:10px"><b>iPhone (Safari):</b> 1. Diese Seite als Lesezeichen sichern (Teilen → Lesezeichen hinzufügen), Name <b>Mediasort CNL</b>. 2. Lesezeichen öffnen → Bearbeiten → das Lesezeichen antippen und die Adresse durch den kopierten Code ersetzen. 3. Auf einer Download-Seite: Lesezeichen → <b>Mediasort CNL</b>.</p>
-      <p class="hint" style="color:var(--muted)"><b>Android (Chrome):</b> 1. Menü ⋮ → ☆ (Lesezeichen), dann Bearbeiten: Name <b>Mediasort CNL</b>, als URL den kopierten Code einfügen. 2. Auf einer Download-Seite in die Adressleiste <b>Mediasort CNL</b> tippen und den Lesezeichen-Vorschlag antippen.</p>
+      <p class="hint" style="color:var(--muted);margin-top:10px"><b>Android-App:</b> Mit der Saugmeister-App (Konto-Menü → „Android-App laden“) braucht ihr kein Lesezeichen: Die Download-Seite (z. B. filecrypt) in Chrome über <b>Teilen → Saugmeister</b> schicken. Sie öffnet sich im eingebauten Browser der App: Captcha lösen, auf <b>Click'n'Load</b> tippen, die Links gehen direkt an den JDownloader.</p>
+      <p class="hint" style="color:var(--muted);margin-top:10px"><b>iPhone (Safari):</b> 1. Diese Seite als Lesezeichen sichern (Teilen → Lesezeichen hinzufügen), Name <b>Saugmeister CNL</b>. 2. Lesezeichen öffnen → Bearbeiten → das Lesezeichen antippen und die Adresse durch den kopierten Code ersetzen. 3. Auf einer Download-Seite: Lesezeichen → <b>Saugmeister CNL</b>.</p>
+      <p class="hint" style="color:var(--muted)"><b>Android (Chrome):</b> 1. Menü ⋮ → ☆ (Lesezeichen), dann Bearbeiten: Name <b>Saugmeister CNL</b>, als URL den kopierten Code einfügen. 2. Auf einer Download-Seite in die Adressleiste <b>Saugmeister CNL</b> tippen und den Lesezeichen-Vorschlag antippen.</p>
     </details>
     <h3 style="font-weight:600;font-size:15px;margin:26px 0 8px">Zuletzt gesendet</h3>
     <div id="lk_hist" class="ulist"></div>
@@ -725,7 +725,7 @@ let setupMode = false;
 function showAuth(setup) {
   setupMode = !!setup;
   $("#authtitle").textContent = setup ? "Willkommen" : "Anmelden";
-  $("#authhint").textContent = setup ? "Lege zuerst dein Admin-Konto an. Danach kannst du in den Einstellungen Konten für deine Freunde erstellen." : "Melde dich mit deinem Mediasort-Konto an.";
+  $("#authhint").textContent = setup ? "Lege zuerst dein Admin-Konto an. Danach kannst du in den Einstellungen Konten für deine Freunde erstellen." : "Melde dich mit deinem Saugmeister-Konto an.";
   $("#a_btn").textContent = setup ? "Admin-Konto anlegen" : "Anmelden";
   $("#a_pw").autocomplete = setup ? "new-password" : "current-password";
   $("#a_codewrap").hidden = true; $("#a_err").textContent = "";
@@ -1096,13 +1096,13 @@ function countLinks() {
   const pages = prot.map(u => `<br><a href="${esc(u)}" style="color:var(--accent,#F5B83D)">↗ ${esc(u.replace(/^https?:\/\//, "").slice(0, 50))}</a>`).join("");
   $("#lk_count").innerHTML = (n ? `${n} ${n === 1 ? "Link" : "Links"} erkannt` : "")
     + (helper.length ? `<br><span style="color:var(--bad)">⚠️ Das ist nur das Click'n'Load-Hilfsfenster von filecrypt, darin stecken keine Links. ${inApp
-        ? "Teile stattdessen die Ordner-Seite (filecrypt.cc/Container/…) mit Mediasort. Sie öffnet sich dann in der App: Captcha lösen, Click'n'Load antippen, fertig."
-        : "Öffne die Ordner-Seite (filecrypt.cc/Container/…), löse das Captcha und tippe dann das Lesezeichen „Mediasort CNL“ an."}</span>` : "")
+        ? "Teile stattdessen die Ordner-Seite (filecrypt.cc/Container/…) mit Saugmeister. Sie öffnet sich dann in der App: Captcha lösen, Click'n'Load antippen, fertig."
+        : "Öffne die Ordner-Seite (filecrypt.cc/Container/…), löse das Captcha und tippe dann das Lesezeichen „Saugmeister CNL“ an."}</span>` : "")
     + (prot.length ? `<br><span style="color:var(--bad)">⚠️ ${prot.length === 1 ? "Ein Link führt" : prot.length + " Links führen"} zu einer Schutzseite. JDownloader kann deren Captcha meist nicht lösen. ${inApp
         ? "Besser: Seite antippen, sie öffnet sich in der App. Dort Captcha lösen und Click'n'Load antippen."
-        : /Android/i.test(navigator.userAgent) ? "Am besten in der Mediasort-App öffnen: Captcha lösen, Click'n'Load antippen, fertig."
-        : "Besser: Seite im Browser öffnen, Captcha lösen und dann das Lesezeichen „Mediasort CNL“ antippen."}</span>${inApp ? pages
-        : /Android/i.test(navigator.userAgent) ? prot.map(u => `<br><a class="btn small" style="margin-top:8px;display:inline-block" href="${esc(appLink(u))}">📱 In der Mediasort-App öffnen</a>`).join("") : ""}` : "");
+        : /Android/i.test(navigator.userAgent) ? "Am besten in der Saugmeister-App öffnen: Captcha lösen, Click'n'Load antippen, fertig."
+        : "Besser: Seite im Browser öffnen, Captcha lösen und dann das Lesezeichen „Saugmeister CNL“ antippen."}</span>${inApp ? pages
+        : /Android/i.test(navigator.userAgent) ? prot.map(u => `<br><a class="btn small" style="margin-top:8px;display:inline-block" href="${esc(appLink(u))}">📱 In der Saugmeister-App öffnen</a>`).join("") : ""}` : "");
 }
 let jdLive = false;
 async function loadLinkHist() {
@@ -1116,7 +1116,7 @@ async function loadLinkHist() {
     if (!r.configured) $("#lk_hist").insertAdjacentHTML("afterbegin", `<p class="hint" style="color:var(--bad)">JDownloader ist noch nicht eingerichtet. Ein Admin muss das in den Einstellungen erledigen.</p>`);
   } catch (e) { $("#lk_hist").innerHTML = `<p class="hint" style="color:var(--bad)">${esc(e.message)}</p>`; }
 }
-// Lesezeichen (Bookmarklet): liest auf einer Download-Seite die Click'n'Load-Felder aus und öffnet damit Mediasort
+// Lesezeichen (Bookmarklet): liest auf einer Download-Seite die Click'n'Load-Felder aus und öffnet damit Saugmeister
 function cnlBookmarklet() {
   const code = `(function(){var M=${JSON.stringify(location.origin)};var F=[].slice.call(document.querySelectorAll('form')).filter(function(f){return /9666|flash\\/add/.test(f.action||'')});var p=new URLSearchParams();if(F.length){['crypted','jk','urls','passwords','source','package'].forEach(function(n){var e=F[0].querySelector('[name="'+n+'"]');if(e&&e.value)p.set(n,e.value)})}if(!p.has('crypted')&&!p.has('urls')){var a=[],s=[];[].slice.call(document.querySelectorAll('*')).forEach(function(e){for(var i=0;i<e.attributes.length;i++){var x=e.attributes[i];if(/^on|^data-|^value$|^href$/.test(x.name))a.push(x.value)}if(e.tagName=='SCRIPT')s.push(e.textContent)});var t=a.concat(s).join(' '),k={},c={};(t.match(/\\b[0-9a-fA-F]{32}\\b/g)||[]).forEach(function(x){k[x]=1});(t.match(/[A-Za-z0-9+\\/]{24,}={0,2}/g)||[]).forEach(function(x){if(x.length%4==0&&!/^[0-9a-fA-F]+$/.test(x))c[x]=1});k=Object.keys(k).slice(0,40);c=Object.keys(c).slice(0,80);if(k.length&&c.length){p.set('keys',k.join(','));p.set('crypts',c.join(','))}else{var l=[].slice.call(document.querySelectorAll('a[href^="http"]')).map(function(a){return a.href});p.set('urls',l.join(' '));p.set('nocnl','1')}}p.set('from',document.title||location.hostname);location.href=M+'/cnl?'+p.toString()})()`;
   return "javascript:" + code;
@@ -1160,7 +1160,7 @@ $("#lk_send").onclick = async () => {
   } catch (e) { toast(e.message, true); }
   b.disabled = false;
 };
-// Fenster schließen; die Zurück-Geste des Handys schließt es ebenfalls, statt Mediasort zu verlassen
+// Fenster schließen; die Zurück-Geste des Handys schließt es ebenfalls, statt Saugmeister zu verlassen
 function closeLinks(fromHistory) {
   if ($("#linkscrim").hidden) return;
   $("#linkscrim").hidden = true;
@@ -1343,7 +1343,7 @@ function wireJd() {
     // Seite im eigenen Browser öffnen; nach dem Senden per Lesezeichen wird dieses Paket gelöscht
     try { await api("/api/jd/pending", {method: "POST", body: {kind: jdTab, uuid: b.dataset.uuid, name: b.dataset.name}}); } catch (e) {}
     window.open(b.dataset.web, "_blank", "noopener");
-    toast(/MediasortApp/.test(navigator.userAgent) ? "Captcha lösen, dann Click'n'Load antippen" : "Captcha lösen, dann Lesezeichen „Mediasort CNL“ antippen");
+    toast(/MediasortApp/.test(navigator.userAgent) ? "Captcha lösen, dann Click'n'Load antippen" : "Captcha lösen, dann Lesezeichen „Saugmeister CNL“ antippen");
   });
   root.querySelectorAll("[data-start]").forEach(b => b.onclick = async () => {
     b.disabled = true;
@@ -1595,7 +1595,7 @@ async function start(user) {
     const jdq = new URLSearchParams(location.search).get("jd");
     if (jdq) { history.replaceState(null, "", "/"); if (jdLive) openJd(jdq === "downloads" ? "downloads" : "grabber"); }
   }).catch(() => {});
-  // Über "Teilen → Mediasort" (Android) geöffnet: Links direkt ins Fenster übernehmen
+  // Über "Teilen → Saugmeister" (Android) geöffnet: Links direkt ins Fenster übernehmen
   if (location.pathname === "/cnl") handleCnl();
   else if (location.pathname === "/share") {
     const q = new URLSearchParams(location.search);

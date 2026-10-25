@@ -119,7 +119,7 @@ def apply(item, settings, companions=()):
             # Schon in der Mediathek: doppelten Download (samt Untertiteln) in den Papierkorb
             for path in [src] + [c["path"] for c in companions]:
                 if os.path.lexists(path):
-                    files.trash_path(path, "Mediasort")
+                    files.trash_path(path, "Saugmeister")
             _remove_empty_dirs(src, settings.get("input_dirs") or [])
             files.cleanup_package(src, settings)
             return True, "Schon in der Mediathek, Download in den Papierkorb verschoben", None

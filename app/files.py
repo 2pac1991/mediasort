@@ -226,7 +226,7 @@ def _discard(folder, settings):
     if settings.get("cleanup_permanent", True):
         shutil.rmtree(folder, ignore_errors=True)
     else:
-        trash_path(folder, "Mediasort")
+        trash_path(folder, "Saugmeister")
 
 
 def cleanup_stale(settings, min_age=1800):

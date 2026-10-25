@@ -29,7 +29,7 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-/** Mediasort als App: zeigt die Weboberfläche des Servers, nimmt geteilte Links an und hilft bei Tailscale. */
+/** Saugmeister als App: zeigt die Weboberfläche des Servers, nimmt geteilte Links an und hilft bei Tailscale. */
 public class MainActivity extends Activity {
     static final String DEFAULT_URL = "https://mediasort.tail780db.ts.net";
     static final String TAILSCALE = "com.tailscale.ipn";
@@ -119,7 +119,7 @@ public class MainActivity extends Activity {
     @SuppressWarnings("deprecation")
     @Override
     public void onBackPressed() {
-        // Zurück schließt erst offene Fenster in Mediasort (die nutzen den Verlauf), dann die App
+        // Zurück schließt erst offene Fenster in Saugmeister (die nutzen den Verlauf), dann die App
         if (errorView.getVisibility() != View.VISIBLE && web.canGoBack()) web.goBack();
         else super.onBackPressed();
     }
@@ -211,7 +211,7 @@ public class MainActivity extends Activity {
         box.setPadding(pad, dp(8), pad, 0);
         box.addView(input);
         new AlertDialog.Builder(this)
-                .setTitle("Adresse von Mediasort")
+                .setTitle("Adresse von Saugmeister")
                 .setMessage("Zum Beispiel " + DEFAULT_URL)
                 .setView(box)
                 .setPositiveButton("Speichern", (d, w) -> {
@@ -292,7 +292,7 @@ public class MainActivity extends Activity {
         v.addView(icon, new LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView title = new TextView(this);
-        title.setText("Mediasort nicht erreichbar");
+        title.setText("Saugmeister nicht erreichbar");
         title.setTextSize(22);
         title.setTextColor(Color.parseColor("#F3F5F8"));
         title.setGravity(Gravity.CENTER);

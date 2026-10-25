@@ -1,14 +1,14 @@
 blueprint:
-  name: Mediasort – Neu in der Mediathek
+  name: Saugmeister – Neu in der Mediathek
   description: >
-    Schickt eine Benachrichtigung aufs Handy, sobald Mediasort einen Film, eine
+    Schickt eine Benachrichtigung aufs Handy, sobald Saugmeister einen Film, eine
     Serie oder einen Anime einsortiert hat (mit Titel, Folge und Poster).
 
 
     **Einrichtung:** Nach dem Speichern die Webhook-Adresse zusammensetzen:
     `https://DEINE-HOME-ASSISTANT-ADRESSE/api/webhook/WEBHOOK-ID`
     (bei Home Assistant Cloud: Einstellungen → Home Assistant Cloud → Webhooks).
-    Diese Adresse in Mediasort beim eigenen Namen unter 🔔 eintragen.
+    Diese Adresse in Saugmeister beim eigenen Namen unter 🔔 eintragen.
   domain: automation
   source_url: https://github.com/2pac1991/mediasort/blob/main/homeassistant/mediasort-benachrichtigung.yaml
   input:
@@ -16,7 +16,7 @@ blueprint:
       name: Webhook-ID
       description: >
         Ein langer, zufälliger Name, den niemand erraten kann (z. B. mediasort-x7k2p9q4m1).
-        Er ist Teil der Adresse, die du in Mediasort einträgst.
+        Er ist Teil der Adresse, die du in Saugmeister einträgst.
       selector:
         text: {}
     notify_device:
@@ -27,7 +27,7 @@ blueprint:
           filter:
             - integration: mobile_app
     open_url:
-      name: Mediasort-Adresse (optional)
+      name: Saugmeister-Adresse (optional)
       description: Wird beim Antippen der Benachrichtigung geöffnet, z. B. https://mediasort.tail780db.ts.net/
       default: ""
       selector:
@@ -42,7 +42,7 @@ triggers:
     webhook_id: !input webhook_id
     allowed_methods:
       - POST
-    # Mediasort läuft bei einem Freund, also nicht im eigenen Heimnetz
+    # Saugmeister läuft bei einem Freund, also nicht im eigenen Heimnetz
     local_only: false
 
 variables:

@@ -13,7 +13,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
-/** Click'n'Load-Daten an Mediasort: entschlüsseln lassen und an den JDownloader geben. */
+/** Click'n'Load-Daten an Saugmeister: entschlüsseln lassen und an den JDownloader geben. */
 final class CnlForwarder {
     static final class Result {
         final int count;
@@ -66,7 +66,7 @@ final class CnlForwarder {
         try {
             code = c.getResponseCode();
         } catch (java.io.IOException e) {
-            throw new Exception("Mediasort nicht erreichbar – ist Tailscale verbunden?");
+            throw new Exception("Saugmeister nicht erreichbar – ist Tailscale verbunden?");
         }
         InputStream in = code < 400 ? c.getInputStream() : c.getErrorStream();
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
@@ -81,7 +81,7 @@ final class CnlForwarder {
         } catch (Exception e) {
             res = new JSONObject();
         }
-        if (code == 401) throw new Exception("Bitte erst in der Mediasort-App anmelden");
+        if (code == 401) throw new Exception("Bitte erst in der Saugmeister-App anmelden");
         if (code >= 400) throw new Exception(res.optString("error", "Fehler " + code));
         return res;
     }

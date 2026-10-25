@@ -1,4 +1,4 @@
-// Mediasort Service Worker: zeigt eine Hinweisseite, wenn der Server nicht erreichbar ist (z. B. Tailscale aus).
+// Saugmeister Service Worker: zeigt eine Hinweisseite, wenn der Server nicht erreichbar ist (z. B. Tailscale aus).
 const CACHE = "mediasort-offline-v3";
 const OFFLINE = "/offline.html";
 

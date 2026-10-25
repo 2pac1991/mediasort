@@ -23,7 +23,7 @@ def _get(path, params=None, max_age=CACHE_SEARCH):
         raise TMDBError("Kein TMDB-API-Key hinterlegt (Einstellungen).")
     params = dict(params or {})
     params.setdefault("language", s.get("language") or "de-DE")
-    headers = {"Accept": "application/json", "User-Agent": "Mediasort/1.0"}
+    headers = {"Accept": "application/json", "User-Agent": "Saugmeister/1.0"}
     # v4-Token (lang, mit Punkten) als Bearer, sonst v3-Key als Parameter
     if len(key) > 40:
         headers["Authorization"] = "Bearer " + key

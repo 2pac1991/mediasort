@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#122230">
-<title>Mediasort – keine Verbindung</title>
+<title>Saugmeister – keine Verbindung</title>
 <style>
   :root { --ink:#122230; --panel:#1a2d3d; --line:#2d465b; --text:#e8eef3; --muted:#8fa5b6; --amber:#f2b33d; --amber-ink:#2a1d04; }
   * { box-sizing: border-box; }
@@ -28,7 +28,7 @@
 <body>
   <div class="card">
     <img src="/apple-touch-icon.png" alt="">
-    <h1>Keine Verbindung zu Mediasort</h1>
+    <h1>Keine Verbindung zu Saugmeister</h1>
     <p>Wahrscheinlich ist <b>Tailscale</b> gerade nicht verbunden. Schalte die Verbindung in der Tailscale-App ein, dann geht es hier von selbst weiter.</p>
     <a class="btn primary" id="open" href="#">Tailscale öffnen</a>
     <button class="btn" id="retry" type="button">Erneut versuchen</button>
@@ -47,7 +47,7 @@
   } else if (ios) {
     // Tailscale hat auf iOS keine Adresse zum direkten Öffnen; im App Store steht bei installierter App "Öffnen"
     open.href = "https://apps.apple.com/app/tailscale/id1470499037";
-    document.getElementById("tip").innerHTML = "Im App Store auf <b>Öffnen</b> tippen, in Tailscale verbinden und zurück zu Mediasort wechseln. Mediasort lädt dann von selbst.<br><br><b>Tipp:</b> In der Tailscale-App <i>VPN On Demand</i> einschalten, dann verbindet es sich automatisch.";
+    document.getElementById("tip").innerHTML = "Im App Store auf <b>Öffnen</b> tippen, in Tailscale verbinden und zurück zu Saugmeister wechseln. Saugmeister lädt dann von selbst.<br><br><b>Tipp:</b> In der Tailscale-App <i>VPN On Demand</i> einschalten, dann verbindet es sich automatisch.";
   } else {
     open.style.display = "none";
     document.getElementById("tip").innerHTML = "Öffne Tailscale auf diesem Gerät und klicke auf <b>Connect</b>.";
@@ -56,7 +56,7 @@
   async function check() {
     try {
       const r = await fetch("/api/health", {cache: "no-store"});
-      if (r.ok) { document.getElementById("st").textContent = "Verbunden, lade Mediasort …"; location.replace("/"); return; }
+      if (r.ok) { document.getElementById("st").textContent = "Verbunden, lade Saugmeister …"; location.replace("/"); return; }
     } catch (e) {}
     setTimeout(check, 3000);
   }

@@ -53,7 +53,7 @@ def public_settings():
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "Mediasort/" + VERSION
+    server_version = "Saugmeister/" + VERSION
 
     def log_message(self, fmt, *args):
         log.debug("%s - %s", self.address_string(), fmt % args)
@@ -234,7 +234,7 @@ class Handler(BaseHTTPRequestHandler):
                 url = users.get_webhook(self.me["name"])
                 if not url:
                     raise ValueError("Keine Webhook-Adresse hinterlegt")
-                text = "Dark (2017) – S01E03 Vergangenheit und Gegenwart (Test von Mediasort)"
+                text = "Dark (2017) – S01E03 Vergangenheit und Gegenwart (Test von Saugmeister)"
                 errors = service.send_webhooks([url], {"count": 1, "files": ["Dark (2017) - s01e03.mkv"], "text": text, "items": [{
                     "kind": "series", "title": "Dark", "year": 2017, "season": 1, "episode": 3,
                     "eptitle": "Vergangenheit und Gegenwart", "file": "Dark (2017) - s01e03.mkv", "text": text,
@@ -428,7 +428,7 @@ def main():
     threading.Thread(target=service.watch_loop, args=(stop,), daemon=True).start()
     port = int(os.environ.get("PORT", "8484"))
     httpd = ThreadingHTTPServer(("0.0.0.0", port), Handler)
-    log.info("Mediasort %s läuft auf Port %d", VERSION, port)
+    log.info("Saugmeister %s läuft auf Port %d", VERSION, port)
     try:
         httpd.serve_forever()
     finally:

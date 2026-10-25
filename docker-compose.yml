@@ -2,7 +2,7 @@ services:
   mediasort:
     build: .
     image: mediasort:latest
-    container_name: Mediasort
+    container_name: Saugmeister
     restart: unless-stopped
     ports:
       - "8484:8484"

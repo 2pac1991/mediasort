@@ -13,7 +13,7 @@
     </queries>
 
     <application
-        android:label="Mediasort"
+        android:label="Saugmeister"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
         android:theme="@style/AppTheme"
@@ -30,7 +30,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Teilen → Mediasort: Links aus jeder App -->
+            <!-- Teilen → Saugmeister: Links aus jeder App -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />

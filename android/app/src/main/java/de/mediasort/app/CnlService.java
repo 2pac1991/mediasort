@@ -30,7 +30,7 @@ import java.util.concurrent.Executors;
 /**
  * Echtes Click'n'Load auf dem Handy: lauscht wie der JDownloader am PC auf 127.0.0.1:9666.
  * Tippt man im Browser auf einer Download-Seite auf "Click'n'Load", schickt die Seite die
- * verschlüsselten Links hierher; die App reicht sie an Mediasort weiter, Mediasort entschlüsselt
+ * verschlüsselten Links hierher; die App reicht sie an Saugmeister weiter, Saugmeister entschlüsselt
  * sie und gibt sie an den JDownloader.
  */
 public class CnlService extends Service {
@@ -200,7 +200,7 @@ public class CnlService extends Service {
         out.flush();
     }
 
-    // ---------- Weiter an Mediasort ----------
+    // ---------- Weiter an Saugmeister ----------
     private void forward(Map<String, String> form) {
         try {
             CnlForwarder.Result r = CnlForwarder.send(this, new JSONObject(form));

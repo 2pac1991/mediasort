@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <Container version="2">
-  <Name>Mediasort</Name>
+  <Name>Saugmeister</Name>
   <Repository>ghcr.io/2pac1991/mediasort:latest</Repository>
   <Registry/>
   <Network>bridge</Network>
