@@ -85,8 +85,10 @@ public class MainActivity extends Activity {
         // Downloads (z. B. eine neue APK) übernimmt der Browser
         web.setDownloadListener((url, ua, cd, mime, len) -> openExternal(Uri.parse(url)));
 
-        if (state != null) web.restoreState(state);
-        else handleIntent(getIntent());
+        Intent start = getIntent();
+        boolean fresh = start != null && (Intent.ACTION_SEND.equals(start.getAction()) || Intent.ACTION_VIEW.equals(start.getAction()));
+        if (state != null && !fresh) web.restoreState(state);
+        else handleIntent(start);
 
         // Echtes Click'n'Load: Hintergrunddienst auf Port 9666 (Hinweis-Benachrichtigung braucht ab Android 13 die Erlaubnis)
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -137,6 +139,16 @@ public class MainActivity extends Activity {
         String url = base() + "/";
         String path = intent != null ? intent.getStringExtra("path") : null;
         if (path != null && path.startsWith("/")) url = base() + path; // aus einer Benachrichtigung
+        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null
+                && "mediasort".equals(intent.getData().getScheme())) {
+            // Aus der Weboberfläche (z. B. Chrome oder Web-App): Schutzseite im eingebauten Browser
+            String page = intent.getData().getQueryParameter("url");
+            if (page != null && isProtector(Uri.parse(page))) {
+                if (web.getUrl() == null) load(url);
+                CnlBrowserActivity.open(this, page);
+                return;
+            }
+        }
         if (intent != null && Intent.ACTION_SEND.equals(intent.getAction())) {
             String text = intent.getStringExtra(Intent.EXTRA_TEXT);
             String subject = intent.getStringExtra(Intent.EXTRA_SUBJECT);

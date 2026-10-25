@@ -1020,6 +1020,10 @@ const PROTECTORS = /(^|\.)(filecrypt\.(cc|co|to)|linkcrypt\.ws|keeplinks\.(org|c
 function protectorLinks(text) {
   return [...new Set(text.match(linkRe) || [])].filter(u => { try { return PROTECTORS.test(new URL(u).hostname); } catch (e) { return false; } });
 }
+// Schutzseite in der Android-App öffnen (eingebauter Browser mit Click'n'Load); ohne App gibt es die APK
+function appLink(u) {
+  return `intent://cnl?url=${encodeURIComponent(u)}#Intent;scheme=mediasort;package=de.mediasort.app;S.browser_fallback_url=${encodeURIComponent(location.origin + "/mediasort.apk")};end`;
+}
 function openLinks(prefill) {
   if (prefill) $("#lk_text").value = prefill;
   $("#lk_android").hidden = !/Android/.test(navigator.userAgent);
@@ -1042,7 +1046,9 @@ function countLinks() {
         : "Öffne die Ordner-Seite (filecrypt.cc/Container/…), löse das Captcha und tippe dann das Lesezeichen „Mediasort CNL“ an."}</span>` : "")
     + (prot.length ? `<br><span style="color:var(--bad)">⚠️ ${prot.length === 1 ? "Ein Link führt" : prot.length + " Links führen"} zu einer Schutzseite. JDownloader kann deren Captcha meist nicht lösen. ${inApp
         ? "Besser: Seite antippen, sie öffnet sich in der App. Dort Captcha lösen und Click'n'Load antippen."
-        : "Besser: Seite im Browser öffnen, Captcha lösen und dann das Lesezeichen „Mediasort CNL“ antippen."}</span>${inApp ? pages : ""}` : "");
+        : /Android/i.test(navigator.userAgent) ? "Am besten in der Mediasort-App öffnen: Captcha lösen, Click'n'Load antippen, fertig."
+        : "Besser: Seite im Browser öffnen, Captcha lösen und dann das Lesezeichen „Mediasort CNL“ antippen."}</span>${inApp ? pages
+        : /Android/i.test(navigator.userAgent) ? prot.map(u => `<br><a class="btn small" style="margin-top:8px;display:inline-block" href="${esc(appLink(u))}">📱 In der Mediasort-App öffnen</a>`).join("") : ""}` : "");
 }
 let jdLive = false;
 async function loadLinkHist() {
