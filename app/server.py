@@ -28,7 +28,7 @@ STATIC_FILES = {
     "/sw.js": "text/javascript; charset=utf-8", "/offline.html": "text/html; charset=utf-8",
 }
 # Ohne Anmeldung erreichbar
-PUBLIC = {"/", "/index.html", "/share", "/cnl", "/api/health", "/api/auth/me", "/api/auth/login", "/api/auth/setup",
+PUBLIC = {"/", "/index.html", "/share", "/cnl", "/api/health", "/api/app/version", "/api/auth/me", "/api/auth/login", "/api/auth/setup",
           "/api/auth/logout", *STATIC_FILES}
 
 
@@ -118,6 +118,13 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, f.read(), STATIC_FILES[u.path])
             if u.path == "/api/health":
                 return self._send(200, {"ok": True})
+            if u.path == "/api/app/version":
+                # Version der Android-App im Image (legt GitHub Actions beim Bauen dazu); die App vergleicht damit
+                info = os.path.join(STATIC, "mediasort-apk.json")
+                if not os.path.exists(info) or not os.path.exists(os.path.join(STATIC, "mediasort.apk")):
+                    return self._send(200, {"versionCode": 0, "versionName": ""})
+                with open(info, encoding="utf-8") as f:
+                    return self._send(200, json.load(f))
             if u.path == "/mediasort.apk":
                 # Android-App, beim Bauen des Docker-Images mit hineingelegt
                 apk = os.path.join(STATIC, "mediasort.apk")

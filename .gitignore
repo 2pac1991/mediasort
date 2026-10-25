@@ -5,3 +5,4 @@ android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
+app/static/mediasort-apk.json

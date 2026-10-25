@@ -49,12 +49,19 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle -p android assembleRelease --no-daemon --stacktrace
 
-      - run: cp android/app/build/outputs/apk/release/app-release.apk mediasort.apk
+      - name: APK und Versionsinfo bereitlegen
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk mediasort.apk
+          # Daran erkennt die installierte App, dass ein Update da ist
+          echo "{\"versionCode\": ${{ github.run_number }}, \"versionName\": \"1.0.${{ github.run_number }}\"}" > mediasort-apk.json
+          cat mediasort-apk.json
 
       - uses: actions/upload-artifact@v4
         with:
           name: mediasort-apk
-          path: mediasort.apk
+          path: |
+            mediasort.apk
+            mediasort-apk.json
 
   build:
     needs: android

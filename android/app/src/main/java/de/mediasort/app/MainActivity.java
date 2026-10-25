@@ -57,12 +57,23 @@ public class MainActivity extends Activity {
     private WebView web;
     private View errorView;
     private SharedPreferences prefs;
+    private Updater updater;
+    private LinearLayout updateBar;
+    private TextView updateText;
+    private Button updateBtn;
+    private boolean installAfterPermission = false;
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         prefs = getSharedPreferences("mediasort", MODE_PRIVATE);
 
+        LinearLayout outer = new LinearLayout(this);
+        outer.setOrientation(LinearLayout.VERTICAL);
+        outer.setBackgroundColor(Color.parseColor("#0A0D12"));
+        updateBar = buildUpdateBar();
+        updateBar.setVisibility(View.GONE);
+        outer.addView(updateBar, new LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT));
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.parseColor("#0A0D12"));
         web = new WebView(this);
@@ -70,7 +81,13 @@ public class MainActivity extends Activity {
         errorView = buildErrorView();
         errorView.setVisibility(View.GONE);
         root.addView(errorView, new FrameLayout.LayoutParams(-1, -1));
-        setContentView(root);
+        outer.addView(root, new LinearLayout.LayoutParams(-1, 0, 1f));
+        setContentView(outer);
+        updater = new Updater(this, new Updater.Listener() {
+            @Override public void onUpdate(int code, String name) { showUpdate(name); }
+            @Override public void onProgress(String text) { showProgress(text); }
+            @Override public void onFailed(String text) { showUpdateError(text); }
+        });
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
@@ -82,8 +99,12 @@ public class MainActivity extends Activity {
         web.setBackgroundColor(Color.parseColor("#0A0D12"));
         web.setWebChromeClient(new WebChromeClient()); // alert/confirm der Seite als normale Dialoge
         web.setWebViewClient(new Client());
-        // Downloads (z. B. eine neue APK) übernimmt der Browser
-        web.setDownloadListener((url, ua, cd, mime, len) -> openExternal(Uri.parse(url)));
+        // Die eigene APK installiert die App selbst, andere Downloads übernimmt der Browser
+        web.setDownloadListener((url, ua, cd, mime, len) -> {
+            Uri u = Uri.parse(url);
+            if (isOwn(u) && u.getPath() != null && u.getPath().endsWith("/mediasort.apk")) startInstall();
+            else openExternal(u);
+        });
 
         Intent start = getIntent();
         boolean fresh = start != null && (Intent.ACTION_SEND.equals(start.getAction()) || Intent.ACTION_VIEW.equals(start.getAction()));
@@ -108,6 +129,18 @@ public class MainActivity extends Activity {
         super.onNewIntent(intent);
         setIntent(intent);
         handleIntent(intent);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Zurück aus den Einstellungen "Unbekannte Apps installieren": gleich weitermachen
+        if (installAfterPermission && getPackageManager().canRequestPackageInstalls()) {
+            installAfterPermission = false;
+            updater.install();
+        } else {
+            updater.check(false);
+        }
     }
 
     @Override
@@ -253,6 +286,78 @@ public class MainActivity extends Activity {
         public void onPageFinished(WebView view, String url) {
             CookieManager.getInstance().flush();
         }
+    }
+
+    // ---------- Update-Hinweis ----------
+    private void startInstall() {
+        if (!updater.ensurePermission()) {
+            // Einstellungsseite ist offen; nach dem Zurückkommen geht es in onResume weiter
+            installAfterPermission = true;
+            showProgress("Einmalig „Aus dieser Quelle zulassen“ einschalten, dann zurück");
+            return;
+        }
+        updater.install();
+    }
+
+    private void showUpdate(String name) {
+        updateText.setText("Update verfügbar" + (name.isEmpty() ? "" : " · Version " + name));
+        updateBtn.setText("Installieren");
+        updateBtn.setVisibility(View.VISIBLE);
+        updateBtn.setEnabled(true);
+        updateBar.setVisibility(View.VISIBLE);
+    }
+
+    private void showProgress(String text) {
+        updateText.setText(text);
+        updateBtn.setVisibility(View.GONE);
+        updateBar.setVisibility(View.VISIBLE);
+    }
+
+    private void showUpdateError(String text) {
+        updateText.setText(text);
+        updateBtn.setText("Nochmal");
+        updateBtn.setVisibility(View.VISIBLE);
+        updateBar.setVisibility(View.VISIBLE);
+    }
+
+    private LinearLayout buildUpdateBar() {
+        LinearLayout bar = new LinearLayout(this);
+        bar.setOrientation(LinearLayout.HORIZONTAL);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setPadding(dp(16), dp(10), dp(8), dp(10));
+        bar.setBackgroundColor(Color.parseColor("#F5B83D"));
+
+        updateText = new TextView(this);
+        updateText.setTextColor(Color.parseColor("#1D1405"));
+        updateText.setTextSize(14);
+        updateText.setTypeface(updateText.getTypeface(), android.graphics.Typeface.BOLD);
+        bar.addView(updateText, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        updateBtn = new Button(this);
+        updateBtn.setAllCaps(false);
+        updateBtn.setTextSize(14);
+        updateBtn.setTextColor(Color.parseColor("#F5B83D"));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(dp(10));
+        bg.setColor(Color.parseColor("#1D1405"));
+        updateBtn.setBackground(bg);
+        updateBtn.setPadding(dp(14), 0, dp(14), 0);
+        updateBtn.setOnClickListener(v -> startInstall());
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(38));
+        lp.leftMargin = dp(10);
+        bar.addView(updateBtn, lp);
+
+        TextView close = new TextView(this);
+        close.setText("✕");
+        close.setTextSize(16);
+        close.setTextColor(Color.parseColor("#1D1405"));
+        close.setPadding(dp(12), dp(6), dp(8), dp(6));
+        close.setOnClickListener(v -> bar.setVisibility(View.GONE));
+        bar.addView(close);
+
+        // Antippen der Leiste startet das Update ebenfalls
+        bar.setOnClickListener(v -> { if (updateBtn.getVisibility() == View.VISIBLE) startInstall(); });
+        return bar;
     }
 
     // ---------- Hinweis, wenn der Server nicht erreichbar ist ----------
