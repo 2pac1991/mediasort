@@ -23,7 +23,19 @@ STOP_TOKENS = {
     "proper", "repack", "rerip", "internal", "limited", "extended", "uncut", "unrated", "remastered",
     "directors", "director's", "dc", "theatrical", "complete", "festival",
     "amzn", "nf", "dsnp", "atvp", "hmax", "hulu", "pcok", "rtl", "joyn", "zdf", "ard", "crunchyroll", "cr",
+    # weitere Ton-/Quellen-/Szene-Kürzel
+    "ac3d", "eac3d", "dtsd", "dd51", "ddp51", "dd20", "ddp20", "ac3md", "ld", "md", "line", "mic", "hdts", "hdcam",
+    "hdtc", "tc", "telecine", "camrip", "uhdrip", "bdmv", "webhdrip", "hdtvrip", "dvdscr", "screener", "r5",
+    "vff", "vf", "vostfr", "truefrench", "french", "ita", "spa", "readnfo", "nfo", "retail", "upscaled", "sbs", "hou",
+    "dl-ac3", "german-dl", "dubbed-dl", "hdr10plus", "dolby", "vision", "aac2", "aac20", "opus", "hfr", "sub", "subs",
 }
+# Webseiten im Dateinamen ("www.seite.org - Film ...", "[ www.seite.com ]", "seite.to_")
+SITE = re.compile(r"(?:^|[\s\[\(._-])(?:www\.)?[a-z0-9-]{2,}\.(?:com|org|net|to|cc|ws|me|biz|info|tv|io|se|nu|ru|in|xyz|club|eu|de|at|ch)(?=$|[\s\]\)_]|\s*-)",
+                  re.IGNORECASE)
+# Sammelordner, deren Name nichts über den Film verrät
+GENERIC_DIRS = re.compile(r"^(downloads?|movies?|filme?|serien|series|shows?|tv|anime|complete|fertig|extracted|_?unpack(ed)?|"
+                          r"incoming|media|video|videos|data|mnt|user|staffel ?\d+|season ?\d+|s\d{1,2}|disc ?\d|cd ?\d|subs?)$",
+                          re.IGNORECASE)
 
 EPISODE_PATTERNS = [
     # S01E02, S01E02E03, S01E02-E03, S01 E02
@@ -53,6 +65,14 @@ def is_sample(path):
     return bool(re.search(r"(^|[ ._-])sample([ ._-]|$)", name))
 
 
+def _strip_sites(text):
+    """Webseiten-Werbung aus dem Namen entfernen, samt Trenner danach ("www.x.org - Film" -> "Film")."""
+    text = re.sub(r"^\s*(?:www\.)?[a-z0-9-]{2,}\.[a-z]{2,6}\s*[-_.]?\s*(?=\w)", lambda m: "" if "." in m.group(0).strip(" -_") and
+                  re.search(r"\.(com|org|net|to|cc|ws|me|biz|info|tv|io|se|nu|ru|in|xyz|club|eu|de|at|ch)\b", m.group(0), re.I)
+                  and re.search(r"\s-\s|^www\.", m.group(0) + text[m.end():m.end() + 3], re.I) else m.group(0), text, flags=re.I)
+    return SITE.sub(" ", text)
+
+
 def _clean(text):
     text = re.sub(r"[._]+", " ", text)
     text = re.sub(r"\s+", " ", text)
@@ -65,7 +85,15 @@ def _title_from(text):
     out = []
     for w in words:
         lw = w.lower().strip("()[]")
-        if lw in STOP_TOKENS or re.fullmatch(r"\d{3,4}p", lw):
+        if lw in STOP_TOKENS or re.fullmatch(r"\d{3,4}p|s\d{1,2}", lw):
+            break
+        # "Titel-1080p" / "dw-1080p": am Bindestrich vor dem Stop-Begriff abschneiden
+        bits = lw.split("-")
+        cut = next((i for i, b in enumerate(bits) if i and (b in STOP_TOKENS or re.fullmatch(r"\d{3,4}p", b))), None)
+        if cut is not None:
+            head = "-".join(w.split("-")[:cut]).strip()
+            if head:
+                out.append(head)
             break
         out.append(w)
     title = " ".join(out).strip(" -")
@@ -74,8 +102,57 @@ def _title_from(text):
     return title.strip(" -")
 
 
+def _junk(r):
+    """Titel aus dem Dateinamen unbrauchbar? (leer, zu kurz, Kennung wie "a1b2c3d4", nur Zahlen)"""
+    t = (r.get("title") or "").strip()
+    if not t:
+        return True
+    compact = re.sub(r"[\s-]", "", t)
+    if len(compact) < 3:
+        return True
+    if " " not in t and len(compact) >= 8 and re.search(r"\d", compact) and re.search(r"[a-z]", compact, re.I):
+        return True  # verschleierter Name
+    return False
+
+
 def parse(path, anime_keywords=("anime",)):
-    """Liefert ein dict mit kind (movie|episode), title, year, season, episode, episode_end, absolute, anime."""
+    """Liefert ein dict mit kind (movie|episode), title, year, season, episode, episode_end, absolute, anime.
+
+    Titel und Jahr kommen aus dem Dateinamen; ist der unbrauchbar (verschleiert, nur Kürzel) oder fehlt beim
+    Film das Jahr, das im Release-Ordner steht, werden Titel und Jahr aus dem Ordnernamen genommen."""
+    r = _parse(path, anime_keywords)
+    parent = os.path.basename(os.path.dirname(path))
+    if not parent or GENERIC_DIRS.match(parent.strip()):
+        return r
+    ext = os.path.splitext(path)[1]
+    f = _parse(os.path.join(os.path.dirname(os.path.dirname(path)), parent + ext), anime_keywords)
+    if not f.get("title") or _junk(f):
+        return r
+    if _junk(r):
+        use = True
+    elif r["kind"] == "movie" and not r.get("year") and f.get("year") and f["kind"] == "movie":
+        # Film ohne Jahr im Dateinamen, aber im Ordner: Ordner ist meist der sauberere Release-Name
+        use = _same_title(r["title"], f["title"])
+    elif r["kind"] == "episode" and len(re.sub(r"\W", "", r["title"] or "")) <= 4 and len(f["title"]) > len(r["title"] or ""):
+        use = True  # Kürzel wie "tlou.s01e01.mkv"
+    else:
+        use = False
+    if use:
+        r["title"], r["year"] = f["title"], f.get("year") or r.get("year")
+        if r["kind"] == "movie" and f["kind"] == "episode":
+            # Datei ohne Folge, Ordner mit Folge: Ordner gilt
+            for k in ("kind", "season", "episode", "episode_end", "absolute"):
+                r[k] = f[k]
+    return r
+
+
+def _same_title(a, b):
+    na = re.sub(r"[^a-z0-9]", "", (a or "").lower())
+    nb = re.sub(r"[^a-z0-9]", "", (b or "").lower())
+    return bool(na) and (na in nb or nb in na)
+
+
+def _parse(path, anime_keywords=("anime",)):
     base = os.path.basename(path)
     stem, ext = os.path.splitext(base)
     parent = os.path.basename(os.path.dirname(path))
@@ -103,6 +180,7 @@ def parse(path, anime_keywords=("anime",)):
         result["group"] = m_group.group(1)
         result["anime"] = True
     raw = CRC.sub(" ", raw)
+    raw = _strip_sites(raw)
     no_brackets = BRACKETS.sub(" ", raw)
     text = _clean(no_brackets)
 
@@ -167,7 +245,7 @@ def parse(path, anime_keywords=("anime",)):
     title = _title_from(_clean(title_part.replace("(", " ").replace(")", " ")))
     if not title:
         # Fallback: Ordnername (z. B. "Film.2020.1080p/abc123.mkv")
-        return parse(os.path.join(os.path.dirname(os.path.dirname(path)), parent + ext), anime_keywords) if parent else result
+        return _parse(os.path.join(os.path.dirname(os.path.dirname(path)), parent + ext), anime_keywords) if parent else result
     result["title"] = title
     return result
 
