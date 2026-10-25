@@ -146,6 +146,9 @@ section{animation:fadein .35s var(--ease)}
 .dock span{font-weight:600;font-size:14px}
 .dock span,.dock .btn{white-space:nowrap}
 .dock .btn{border-radius:999px}
+.dock.multi{flex-wrap:wrap;justify-content:center;border-radius:22px;padding:8px 10px;gap:8px}
+.dock.multi span{flex-basis:100%;text-align:center}
+@media (min-width:640px){.dock.multi{flex-wrap:nowrap;border-radius:999px;padding:8px 8px 8px 20px}.dock.multi span{flex-basis:auto}}
 
 /* ---------- Verlauf ---------- */
 table{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden}
@@ -407,6 +410,7 @@ details summary{cursor:pointer}
       <button class="btn ghost" id="rescan" title="Alle offenen Dateien neu bei TMDB abfragen">Neu erkennen</button>
       <button class="btn" id="linksbtn" type="button" hidden>＋ Links senden</button>
       <button class="btn ghost" id="jdbtn" type="button" hidden>📥 JDownloader</button>
+      <button class="btn ghost" id="selall" type="button">☑ Alle auswählen</button>
       <span class="grow"></span>
       <div class="filters" id="filters"></div>
     </div>
@@ -564,7 +568,9 @@ details summary{cursor:pointer}
 
 <div class="dock" id="dock" hidden>
   <span id="dockinfo"></span>
-  <button class="btn ghost small" id="selnone">Abwählen</button>
+  <button class="btn ghost small" id="selnone" title="Auswahl aufheben">✕</button>
+  <button class="btn ghost small" id="selignore" hidden>Ignorieren</button>
+  <button class="btn small danger" id="seldel" hidden>Löschen</button>
   <button class="btn primary" id="apply">Einsortieren</button>
 </div>
 
@@ -818,7 +824,7 @@ function render() {
           `<span class="${n === segs.length - 1 ? "file" : "seg"}">${esc(s)}</span>${n < segs.length - 1 ? '<span class="sep">/</span>' : ""}`).join("")}</div>`
       : `<div class="to none">${esc(i.message || "Kein Ziel")}</div>`;
     const cls = conf >= 85 ? "" : conf >= 60 ? "mid" : "low";
-    const selectable = !["done","ignored"].includes(i.status) && i.target;
+    const selectable = i.status !== "done";
     return `<div class="row ${selected.has(i.id) ? "sel" : ""}" data-id="${i.id}">
       <input type="checkbox" aria-label="Auswählen" ${selected.has(i.id) ? "checked" : ""} ${selectable ? "" : "disabled"}>
       <div class="poster" style="${m.poster ? `background-image:url('${esc(m.poster)}')` : ""}"></div>
@@ -837,11 +843,27 @@ function render() {
 }
 function updateDock() {
   const onInbox = !$("#tab-inbox").hidden;
-  [...selected].forEach(id => { const i = items.find(x => x.id === id); if (!i || !i.target || ["done","ignored"].includes(i.status)) selected.delete(id); });
+  [...selected].forEach(id => { const i = items.find(x => x.id === id); if (!i || i.status === "done") selected.delete(id); });
   const ready = items.filter(i => i.status === "ready").length;
+  const vis = visible().filter(i => i.status !== "done");
+  $("#selall").hidden = !vis.length;
+  $("#selall").textContent = vis.length && vis.every(i => selected.has(i.id)) ? "☐ Keine auswählen" : "☑ Alle auswählen";
   $("#dock").hidden = !onInbox || (!selected.size && !ready);
-  if (selected.size) { $("#dockinfo").textContent = `${selected.size} ausgewählt`; $("#apply").textContent = "Einsortieren"; $("#selnone").hidden = false; }
-  else { $("#dockinfo").textContent = `${ready} bereit`; $("#apply").textContent = innerWidth < 500 ? "Alle einsortieren" : "Alle bereiten einsortieren"; $("#selnone").hidden = true; }
+  $("#dock").classList.toggle("multi", selected.size > 0);
+  if (selected.size) {
+    const sel = [...selected].map(id => items.find(x => x.id === id)).filter(Boolean);
+    const sortable = sel.filter(i => i.target && i.status !== "ignored").length;
+    const allIgnored = sel.every(i => i.status === "ignored");
+    $("#dockinfo").textContent = `${selected.size} ausgewählt`;
+    $("#apply").textContent = sortable && sortable < sel.length ? `${sortable} einsortieren` : "Einsortieren";
+    $("#apply").hidden = !sortable;
+    $("#selnone").hidden = false; $("#selignore").hidden = false;
+    $("#selignore").textContent = allIgnored ? "Wieder anzeigen" : "Ignorieren";
+    $("#seldel").hidden = !(me && me.can_delete);
+  } else {
+    $("#dockinfo").textContent = `${ready} bereit`; $("#apply").textContent = innerWidth < 500 ? "Alle einsortieren" : "Alle bereiten einsortieren";
+    $("#apply").hidden = false; $("#selnone").hidden = true; $("#selignore").hidden = true; $("#seldel").hidden = true;
+  }
 }
 async function loadItems(all) {
   items = await api("/api/items" + (all ? "?all=1" : ""));
@@ -860,8 +882,34 @@ async function scan(force) {
 $("#scan").onclick = () => scan(false);
 $("#rescan").onclick = () => scan(true);
 $("#selnone").onclick = () => { selected.clear(); render(); };
+$("#selall").onclick = () => {
+  const vis = visible().filter(i => i.status !== "done");
+  if (vis.every(i => selected.has(i.id))) vis.forEach(i => selected.delete(i.id));
+  else vis.forEach(i => selected.add(i.id));
+  render();
+};
+$("#selignore").onclick = async () => {
+  const ids = [...selected], reset = $("#selignore").textContent === "Wieder anzeigen";
+  try {
+    await api("/api/items/ignore", {method: "POST", body: {ids, reset}});
+    toast(reset ? `${ids.length} wieder im Eingang` : `${ids.length} ${ids.length === 1 ? "Datei wird" : "Dateien werden"} ignoriert`);
+    selected.clear(); await loadItems(filter === "all");
+  } catch (e) { toast(e.message, true); }
+};
+$("#seldel").onclick = async () => {
+  const ids = [...selected];
+  if (!confirm(`${ids.length} ${ids.length === 1 ? "Datei" : "Dateien"} löschen?\nSie kommen in den Papierkorb und lassen sich dort wiederherstellen.`)) return;
+  $("#seldel").disabled = true;
+  try {
+    const r = await api("/api/items/delete", {method: "POST", body: {ids}});
+    toast(r.errors.length ? `${r.deleted} gelöscht, ${r.errors.length} nicht: ${r.errors[0]}` : `${r.deleted} ${r.deleted === 1 ? "Datei" : "Dateien"} gelöscht`, r.errors.length > 0);
+    selected.clear(); await loadItems(filter === "all");
+  } catch (e) { toast(e.message, true); }
+  $("#seldel").disabled = false;
+};
 $("#apply").onclick = async () => {
-  const ids = selected.size ? [...selected] : items.filter(i => i.status === "ready").map(i => i.id);
+  const ids = selected.size ? [...selected].filter(id => { const i = items.find(x => x.id === id); return i && i.target && i.status !== "ignored"; })
+    : items.filter(i => i.status === "ready").map(i => i.id);
   if (!ids.length) return;
   $("#apply").disabled = true;
   try {

@@ -356,6 +356,33 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"new": n, "items": db.list_items()})
             if u.path == "/api/apply":
                 return self._send(200, service.apply_items(body.get("ids") or []))
+            if u.path == "/api/items/delete":
+                # Mehrere Dateien aus dem Eingang in den Papierkorb (nur Dateien in den Download-Ordnern)
+                self._need(delete=True)
+                dirs = [os.path.realpath(d) for d in (config.get().get("input_dirs") or []) if d]
+                done, errors = 0, []
+                for iid in body.get("ids") or []:
+                    it = db.get_item(str(iid))
+                    if not it:
+                        continue
+                    full = os.path.realpath(it["path"])
+                    if not any(full.startswith(d + os.sep) for d in dirs):
+                        errors.append(f"{os.path.basename(full)}: liegt nicht im Download-Ordner")
+                        continue
+                    try:
+                        if os.path.lexists(full):
+                            files.trash_path(full, self.me["name"])
+                        db.delete_item(it["id"])
+                        done += 1
+                    except OSError as e:
+                        errors.append(f"{os.path.basename(full)}: {e.strerror or e}")
+                log.info("%s hat %d Dateien aus dem Eingang gelöscht", self.me["name"], done)
+                return self._send(200, {"deleted": done, "errors": errors})
+            if u.path == "/api/items/ignore":
+                status = "review" if body.get("reset") else "ignored"
+                for iid in body.get("ids") or []:
+                    db.set_status(str(iid), status, None)
+                return self._send(200, {"ok": True})
             m = re.fullmatch(r"/api/items/(\w+)/match", u.path)
             if m:
                 it = service.rematch(m.group(1), body.get("type"), int(body["id"]), body.get("season"), body.get("episode"))
