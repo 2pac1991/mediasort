@@ -11,7 +11,7 @@ from urllib.parse import parse_qs, urlparse
 
 from . import config, db, files, library, links, myjd, renamer, service, storage, tmdb, users
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 STATIC = os.path.join(os.path.dirname(__file__), "static")
 # Früherer Einzel-Passwortschutz: wenn gesetzt, muss er beim Anlegen des ersten Admins angegeben werden
 SETUP_CODE = os.environ.get("UI_PASSWORD", "")
@@ -19,6 +19,24 @@ COOKIE = "mediasort_session"
 # Hängendes JDownloader-Paket, das jemand gerade im Browser löst: wird nach erfolgreichem Senden gelöscht
 PENDING = {}
 log = logging.getLogger("mediasort")
+
+
+class RingLog(logging.Handler):
+    """Die letzten Protokollzeilen im Speicher, damit man sie in der Oberfläche (auch am Handy) ansehen kann."""
+    def __init__(self, size=400):
+        super().__init__()
+        import collections
+        self.lines = collections.deque(maxlen=size)
+
+    def emit(self, record):
+        try:
+            self.lines.append({"ts": record.created, "level": record.levelname, "msg": self.format(record)})
+        except Exception:  # noqa: BLE001
+            pass
+
+
+RING = RingLog()
+RING.setFormatter(logging.Formatter("%(message)s"))
 
 # Statische Dateien für Icon und Web-App (ohne Anmeldung, sonst kann das Handy sie nicht laden)
 STATIC_FILES = {
@@ -189,11 +207,19 @@ class Handler(BaseHTTPRequestHandler):
                 s = config.get()
                 return self._send(200, {
                     "version": VERSION, "stats": db.stats(), "state": service.state,
+                    "plex_configured": bool(s.get("plex_url") and s.get("plex_token")),
                     "tmdb_key": bool(s.get("tmdb_api_key")), "watch_enabled": s.get("watch_enabled"),
                     "input_dirs": [{"path": d, "exists": os.path.isdir(d)} for d in s["input_dirs"]],
                 })
             if u.path == "/api/settings":
                 return self._send(200, public_settings())
+            if u.path == "/api/logs":
+                self._need(admin=True)
+                return self._send(200, list(RING.lines)[-int(q.get("limit", 200)):])
+            if u.path == "/api/plex/sections":
+                self._need(admin=True)
+                return self._send(200, {"sections": service.plex_sections(),
+                                        "roots": {k: config.get().get(k) for k in ("movie_root", "series_root", "anime_root")}})
             if u.path == "/api/items":
                 return self._send(200, db.list_items(include_done=q.get("all") == "1"))
             if u.path == "/api/history":
@@ -404,7 +430,10 @@ class Handler(BaseHTTPRequestHandler):
                 n = service.scan(force=force)
                 return self._send(200, {"new": n, "items": db.list_items()})
             if u.path == "/api/apply":
-                return self._send(200, service.apply_items(body.get("ids") or []))
+                res = service.apply_items(body.get("ids") or [])
+                return self._send(200, {"results": res, "plex": service.state.get("plex")} if body.get("v2") else res)
+            if u.path == "/api/plex/refresh":
+                return self._send(200, service.plex_refresh())
             if u.path == "/api/items/delete":
                 # Mehrere Dateien aus dem Eingang in den Papierkorb (nur Dateien in den Download-Ordnern)
                 self._need(delete=True)
@@ -474,7 +503,9 @@ def main():
     config.load()
     db.init(os.path.join(config.CONFIG_DIR, "mediasort.db"))
     stop = threading.Event()
-    threading.Thread(target=service.watch_loop, args=(stop,), daemon=True).start()
+    logging.getLogger().addHandler(RING)
+    threading.Thread(target=service.watch_loop, args=(stop,), daemon=True, name="watch").start()
+    threading.Thread(target=service.jd_loop, args=(stop,), daemon=True, name="jdownloader").start()
     port = int(os.environ.get("PORT", "8484"))
     httpd = ThreadingHTTPServer(("0.0.0.0", port), Handler)
     log.info("Saugmeister %s läuft auf Port %d", VERSION, port)

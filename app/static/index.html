@@ -388,6 +388,24 @@ details summary{cursor:pointer}
 .capdlg .acts .btn{width:100%;justify-content:center;padding:12px}
 .capdlg .hint2{color:var(--muted);font-size:13px;margin-top:10px;line-height:1.45}
 
+/* ---------- Plex-Hinweis & Protokoll ---------- */
+.warnbar{display:flex;align-items:flex-start;gap:12px;background:var(--bad-soft);border:1px solid rgba(255,107,107,.35);color:var(--text);border-radius:var(--r-lg);padding:12px 14px;margin-bottom:14px;font-size:14px;line-height:1.45}
+.warnbar.soft{background:var(--amber-soft);border-color:rgba(245,184,61,.35)}
+.warnbar b{display:block;margin-bottom:2px}
+.warnbar .tx{flex:1;min-width:0;word-break:break-word}
+.warnbar .tx span{color:var(--text-2)}
+.warnbar .ac{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.plexsec{margin-top:12px;display:grid;gap:8px}
+.plexsec div{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px;font-size:13.5px}
+.plexsec div b{display:block;margin-bottom:3px}
+.plexsec code{font-size:12px;word-break:break-all}
+.plexsec .ok{color:var(--ok)}.plexsec .bad{color:var(--bad)}
+.logbox{margin-top:12px;max-height:380px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.5}
+.logbox div{white-space:pre-wrap;word-break:break-word;border-bottom:1px solid var(--line);padding:3px 0;color:var(--text-2)}
+.logbox div.ERROR,.logbox div.CRITICAL{color:var(--bad)}
+.logbox div.WARNING{color:var(--warn)}
+.logbox i{color:var(--faint);font-style:normal;margin-right:6px}
+
 /* ---------- Desktop: Navigation als Seitenleiste ---------- */
 @media (min-width:1000px){
   header{border-bottom:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;position:static}
@@ -490,6 +508,7 @@ details summary{cursor:pointer}
       <span class="grow"></span>
       <div class="filters" id="filters"></div>
     </div>
+    <div id="plexwarn" hidden></div>
     <div class="list" id="list"></div>
   </section>
 
@@ -585,6 +604,15 @@ details summary{cursor:pointer}
         <p class="hint">Nach dem Einsortieren die Bibliothek aktualisieren.</p>
         <label class="f" for="plex_url">Plex-Adresse</label><input type="text" id="plex_url" name="plex_url" placeholder="http://192.168.1.10:32400">
         <label class="f" for="plex_token">Plex-Token</label><input type="password" id="plex_token" name="plex_token" placeholder="Neues Token eingeben">
+        <div class="inline" style="margin-top:12px"><button type="button" class="btn small" id="plexcheck">Plex prüfen</button><button type="button" class="btn small ghost" id="plexrefresh">Bibliotheken jetzt einlesen</button></div>
+        <div class="plexsec" id="plexsec"></div>
+      </div>
+
+      <div class="card" id="logcard">
+        <h2>Protokoll</h2>
+        <p class="hint">Was Saugmeister zuletzt gemacht hat, mit Fehlern und Warnungen. Hilft bei der Fehlersuche.</p>
+        <div class="inline"><button type="button" class="btn small" id="logshow">Protokoll anzeigen</button><button type="button" class="btn small ghost" id="logcopy" hidden>Kopieren</button></div>
+        <div class="logbox" id="logbox" hidden></div>
       </div>
 
       <div class="card">
@@ -1011,9 +1039,12 @@ $("#apply").onclick = async () => {
   if (!ids.length) return;
   $("#apply").disabled = true;
   try {
-    const res = await api("/api/apply", {method: "POST", body: {ids}});
+    const r2 = await api("/api/apply", {method: "POST", body: {ids, v2: true}});
+    const res = r2.results || [];
     const ok = res.filter(r => r.ok).length, bad = res.length - ok;
-    toast(bad ? `${ok} einsortiert, ${bad} mit Fehler` : `${ok} einsortiert`, bad > 0);
+    const plexBad = ok && r2.plex && !r2.plex.ok;
+    toast(bad ? `${ok} einsortiert, ${bad} mit Fehler` : plexBad ? `${ok} einsortiert – aber Plex wurde nicht aktualisiert` : `${ok} einsortiert`, bad > 0 || plexBad);
+    status();
     selected.clear(); await loadItems(filter === "all");
   } catch (e) { toast(e.message, true); }
   $("#apply").disabled = false;
@@ -1645,6 +1676,57 @@ $("#hookclose").onclick = () => $("#hookscrim").hidden = true;
 $("#hook_x").onclick = () => $("#hookscrim").hidden = true;
 $("#hookscrim").onclick = e => { if (e.target === $("#hookscrim")) $("#hookscrim").hidden = true; };
 
+
+/* Plex: Hinweis, wenn das Aktualisieren nicht geklappt hat */
+function renderPlexWarn(s) {
+  const el = $("#plexwarn"), p = s.state && s.state.plex, admin = me && me.role === "admin";
+  let html = "";
+  if (p && !p.ok && s.plex_configured) html = `<div class="warnbar"><div class="tx"><b>Plex wurde nicht aktualisiert</b><span>${esc(p.error || "")}</span>
+      <div class="ac"><button class="btn small" type="button" data-pa="retry">Nochmal versuchen</button>${admin ? `<button class="btn small ghost" type="button" data-pa="check">Plex prüfen</button>` : ""}</div></div></div>`;
+  else if (!s.plex_configured && admin) html = `<div class="warnbar soft"><div class="tx"><b>Plex ist nicht verbunden</b><span>Neue Filme tauchen in Plex erst auf, wenn Plex von selbst scannt. Trag Plex-Adresse und Token in den Einstellungen ein.</span>
+      <div class="ac"><button class="btn small" type="button" data-pa="check">Zu den Einstellungen</button></div></div></div>`;
+  el.innerHTML = html; el.hidden = !html;
+  el.querySelectorAll("[data-pa]").forEach(b => b.onclick = async () => {
+    if (b.dataset.pa === "check") { document.querySelector('nav button[data-tab="settings"]').click(); setTimeout(() => { $("#plexcheck").scrollIntoView({block: "center"}); $("#plexcheck").click(); }, 400); return; }
+    try { const r = await api("/api/plex/refresh", {method: "POST"}); toast(r.ok ? "Plex liest die Bibliotheken neu ein" : r.error, !r.ok); status(); }
+    catch (e) { toast(e.message, true); }
+  });
+}
+$("#plexcheck").onclick = async () => {
+  const box = $("#plexsec"); box.innerHTML = `<div><span class="spin"></span> Frage Plex …</div>`;
+  try {
+    const r = await api("/api/plex/sections");
+    const last = p => (p || "").replace(/\/+$/, "").split("/").pop().toLowerCase();
+    const mine = Object.values(r.roots).filter(Boolean).map(last);
+    box.innerHTML = r.sections.length ? r.sections.map(sec => {
+      const match = sec.paths.some(p => mine.includes(last(p)));
+      return `<div><b>${esc(sec.title)} <span style="color:var(--muted);font-weight:500">· ${sec.type === "movie" ? "Filme" : sec.type === "show" ? "Serien" : esc(sec.type)}${sec.refreshing ? " · liest gerade ein" : ""}</span></b>
+        ${sec.paths.map(p => `<code>${esc(p)}</code>`).join("<br>")}
+        ${sec.type === "movie" || sec.type === "show" ? `<br><span class="${match ? "ok" : "bad"}">${match ? "✓ passt zu einem Saugmeister-Ordner" : "✗ passt zu keinem Saugmeister-Ordner – Plex sucht woanders"}</span>` : ""}</div>`;
+    }).join("") + `<div style="color:var(--muted)">Saugmeister sortiert nach: ${Object.values(r.roots).filter(Boolean).map(p => `<code>${esc(p)}</code>`).join(", ")}. Plex sieht die Ordner unter eigenen Pfaden, wichtig ist, dass es dieselben Ordner sind.</div>`
+      : `<div class="bad">Plex ist erreichbar, hat aber keine Bibliotheken.</div>`;
+    box.insertAdjacentHTML("afterbegin", `<div class="ok">✓ Plex erreichbar, Token gültig</div>`);
+  } catch (e) { box.innerHTML = `<div class="bad">✗ ${esc(e.message)}</div>`; }
+};
+$("#plexrefresh").onclick = async () => {
+  try { const r = await api("/api/plex/refresh", {method: "POST"}); toast(r.ok ? "Plex liest die Bibliotheken neu ein" : r.error, !r.ok); status(); }
+  catch (e) { toast(e.message, true); }
+};
+let logLines = [];
+$("#logshow").onclick = async () => {
+  try {
+    logLines = await api("/api/logs?limit=300");
+    const box = $("#logbox"); box.hidden = false; $("#logcopy").hidden = false;
+    const t = ts => new Date(ts * 1000).toLocaleString("de-AT", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit"});
+    box.innerHTML = logLines.length ? logLines.slice().reverse().map(l => `<div class="${l.level}"><i>${t(l.ts)}</i>${esc(l.msg)}</div>`).join("") : "<div>Noch nichts protokolliert (seit dem letzten Neustart).</div>";
+    $("#logshow").textContent = "Aktualisieren";
+  } catch (e) { toast(e.message, true); }
+};
+$("#logcopy").onclick = async () => {
+  const txt = logLines.map(l => `${new Date(l.ts * 1000).toISOString()} ${l.level} ${l.msg}`).join("\n");
+  try { await navigator.clipboard.writeText(txt); toast("Protokoll kopiert"); } catch (e) { toast("Kopieren nicht möglich", true); }
+};
+
 /* Speicher */
 let storTimer = null, storData = null;
 const STOR_COLOR = {movies: "var(--c-movies)", series: "var(--c-series)", anime: "var(--c-anime)", trash: "var(--c-trash)"};
@@ -1895,6 +1977,7 @@ async function status() {
     const on = s.watch_enabled && s.tmdb_key;
     $("#watch").innerHTML = `<span class="dot ${on ? "on" : ""}"></span><span>${on ? "Watch-Ordner aktiv" : "Watch-Ordner aus"}${s.state.last_error ? " · Fehler" : ""}</span>`;
     $("#watch").title = s.state.last_error || "";
+    renderPlexWarn(s);
   } catch (e) {}
 }
 

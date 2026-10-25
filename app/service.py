@@ -5,6 +5,7 @@ import logging
 import os
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -12,7 +13,7 @@ from . import config, db, files, library, matcher, myjd, parser, renamer, tmdb, 
 
 log = logging.getLogger("mediasort")
 scan_lock = threading.Lock()
-state = {"watch_last_run": None, "watch_running": False, "scanning": False, "last_error": None}
+state = {"watch_last_run": None, "watch_running": False, "scanning": False, "last_error": None, "plex": None}
 INCOMPLETE = (".part", ".!qb", ".crdownload", ".tmp", ".mediasort-part", ".partial")
 
 
@@ -20,11 +21,18 @@ def item_id(path):
     return hashlib.sha1(path.encode("utf-8")).hexdigest()[:16]
 
 
+_missing_warned = set()
+
+
 def iter_videos(settings):
     min_size = int(settings.get("min_size_mb") or 0) * 1024 * 1024
     for root in settings["input_dirs"]:
         if not os.path.isdir(root):
+            if root not in _missing_warned:
+                _missing_warned.add(root)
+                log.warning("Download-Ordner %s existiert im Container nicht – Pfad in den Einstellungen prüfen", root)
             continue
+        _missing_warned.discard(root)
         for dirpath, dirnames, filenames in os.walk(root):
             dirnames[:] = [d for d in dirnames if not d.startswith(".")]
             for name in filenames:
@@ -93,6 +101,9 @@ def scan(force=False):
                 item = evaluate(path, st, settings)
                 db.upsert_item(item)
                 new_count += 1
+                log.info("Im Eingang: %s → %s", os.path.basename(path),
+                         {"ready": "bereit", "review": "bitte prüfen", "error": "Fehler"}.get(item.get("status"), item.get("status"))
+                         + (f" ({item['message']})" if item.get("message") and item.get("status") != "ready" else ""))
             # Verschwundene, offene Einträge entfernen
             for iid, (status, _, _) in known.items():
                 if iid not in seen and status not in ("done",):
@@ -149,6 +160,54 @@ def apply_items(ids):
     return results
 
 
+def plex_refresh(s=None):
+    """Plex die Bibliotheken neu einlesen lassen. Das Ergebnis merken, damit die Oberfläche Fehler zeigen kann."""
+    s = s or config.get()
+    if not (s.get("plex_url") and s.get("plex_token")):
+        state["plex"] = {"ok": False, "ts": time.time(), "error": "Plex ist in den Einstellungen nicht eingetragen"}
+        return state["plex"]
+    try:
+        url = s["plex_url"].rstrip("/") + "/library/sections/all/refresh?" + urllib.parse.urlencode(
+            {"X-Plex-Token": s["plex_token"]}
+        )
+        urllib.request.urlopen(urllib.request.Request(url), timeout=10).close()
+        state["plex"] = {"ok": True, "ts": time.time(), "error": None}
+        log.info("Plex-Bibliotheken werden neu eingelesen")
+    except Exception as e:  # noqa: BLE001
+        msg = str(e)
+        if "Connection refused" in msg or "timed out" in msg or "No route" in msg or "Name or service" in msg:
+            msg = f"Plex unter {s['plex_url']} nicht erreichbar – läuft Plex, und stimmt die Adresse in den Einstellungen?"
+        elif "401" in msg:
+            msg = "Plex lehnt das Token ab (401) – bitte in den Einstellungen ein neues Plex-Token eintragen"
+        state["plex"] = {"ok": False, "ts": time.time(), "error": msg}
+        log.warning("Plex-Refresh fehlgeschlagen: %s", msg)
+    return state["plex"]
+
+
+def plex_sections():
+    """Bibliotheken in Plex mit ihren Ordnern – zum Prüfen, ob Plex dort sucht, wo Saugmeister einsortiert."""
+    import xml.etree.ElementTree as ET
+    s = config.get()
+    if not (s.get("plex_url") and s.get("plex_token")):
+        raise ValueError("Plex-Adresse und Token fehlen in den Einstellungen")
+    url = s["plex_url"].rstrip("/") + "/library/sections?" + urllib.parse.urlencode({"X-Plex-Token": s["plex_token"]})
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"Accept": "application/xml"}), timeout=10) as r:
+            root = ET.fromstring(r.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            raise ValueError("Plex lehnt das Token ab (401) – bitte ein neues Plex-Token eintragen") from e
+        raise ValueError(f"Plex antwortet mit Fehler {e.code}") from e
+    except Exception as e:  # noqa: BLE001
+        raise ValueError(f"Plex nicht erreichbar unter {s['plex_url']}: {e}") from e
+    out = []
+    for d in root.findall("Directory"):
+        out.append({"title": d.get("title"), "type": d.get("type"),
+                    "paths": [l.get("path") for l in d.findall("Location")],
+                    "refreshing": d.get("refreshing") == "1"})
+    return out
+
+
 def webhook_entry(result):
     """Lesbare Angaben zu einem einsortierten Eintrag, z. B. für eine Home-Assistant-Benachrichtigung."""
     it = db.get_item(result["id"]) or {}
@@ -170,14 +229,7 @@ def webhook_entry(result):
 
 def notify(results):
     s = config.get()
-    if s.get("plex_url") and s.get("plex_token"):
-        try:
-            url = s["plex_url"].rstrip("/") + "/library/sections/all/refresh?" + urllib.parse.urlencode(
-                {"X-Plex-Token": s["plex_token"]}
-            )
-            urllib.request.urlopen(urllib.request.Request(url), timeout=10).close()
-        except Exception as e:  # noqa: BLE001
-            log.warning("Plex-Refresh fehlgeschlagen: %s", e)
+    plex_refresh(s)
     # Webhook aus den Einstellungen plus die eigenen Webhooks der Nutzer (z. B. ihr Home Assistant)
     urls = list(dict.fromkeys([u for u in [s.get("webhook_url")] + users.all_webhooks() if u]))
     if urls:
@@ -235,24 +287,38 @@ def check_captchas():
                          "title": "🔐 Captcha lösen", "text": text, "path": "/?captcha=1"})
 
 
+def jd_loop(stop_event):
+    """JDownloader im eigenen Thread abfragen (Captchas, schon vorhandene Dateien).
+    So muss der Watch-Ordner nie warten, wenn My.JDownloader langsam oder nicht erreichbar ist."""
+    last_captcha = last_dedupe = 0
+    captcha_every = 20
+    while not stop_event.is_set():
+        if myjd.configured():
+            if time.time() - last_captcha > captcha_every:
+                last_captcha = time.time()
+                try:
+                    check_captchas()
+                    captcha_every = 20
+                except Exception as e:  # noqa: BLE001
+                    captcha_every = 120  # JDownloader nicht erreichbar: seltener fragen
+                    log.debug("Captchas nicht abrufbar: %s", e)
+            if config.get().get("jd_skip_existing") and time.time() - last_dedupe > 60:
+                last_dedupe = time.time()
+                try:
+                    removed = myjd.remove_existing()
+                    if removed:
+                        log.info("Schon vorhanden, aus dem JDownloader-Linksammler entfernt: %s", ", ".join(removed))
+                except Exception as e:  # noqa: BLE001
+                    log.debug("Abgleich mit JDownloader nicht möglich: %s", e)
+        stop_event.wait(5)
+
+
 def watch_loop(stop_event):
     """Watch-Ordner: neue Dateien erkennen, sobald sie fertig geschrieben sind, sichere Treffer automatisch einsortieren."""
     sizes = {}
     last_purge = 0
     last_cleanup = 0
-    last_dedupe = 0
-    last_captcha = 0
-    last_watch = 0
-    captcha_every = 20
     while not stop_event.is_set():
-        if myjd.configured() and time.time() - last_captcha > captcha_every:
-            last_captcha = time.time()
-            try:
-                check_captchas()
-                captcha_every = 20
-            except Exception as e:  # noqa: BLE001
-                captcha_every = 120  # JDownloader nicht erreichbar: seltener fragen
-                log.debug("Captchas nicht abrufbar: %s", e)
         if time.time() - last_cleanup > 600:
             last_cleanup = time.time()
             try:
@@ -268,19 +334,8 @@ def watch_loop(stop_event):
             except Exception:  # noqa: BLE001
                 log.exception("Papierkorb leeren fehlgeschlagen")
         s = config.get()
-        if s.get("jd_skip_existing") and myjd.configured() and time.time() - last_dedupe > 60:
-            last_dedupe = time.time()
-            try:
-                removed = myjd.remove_existing()
-                if removed:
-                    log.info("Schon vorhanden, aus dem JDownloader-Linksammler entfernt: %s", ", ".join(removed))
-            except Exception as e:  # noqa: BLE001
-                log.debug("Abgleich mit JDownloader nicht möglich: %s", e)
         interval = max(15, int(s.get("watch_interval") or 60))
-        if s.get("watch_enabled") and s.get("tmdb_api_key") and time.time() - last_watch < interval - 1:
-            pass  # Watch-Ordner erst wieder nach `interval` Sekunden
-        elif s.get("watch_enabled") and s.get("tmdb_api_key"):
-            last_watch = time.time()
+        if s.get("watch_enabled") and s.get("tmdb_api_key"):
             state["watch_running"] = True
             try:
                 settle = int(s.get("watch_settle_seconds", 120) if s.get("watch_settle_seconds") is not None else 120)
@@ -305,5 +360,4 @@ def watch_loop(stop_event):
             state["watch_last_run"] = time.time()
         else:
             state["watch_running"] = False
-        # Kurz warten, damit Captchas schnell gemeldet werden; der Watch-Ordner läuft trotzdem nur alle `interval` Sekunden
-        stop_event.wait(min(interval, 20) if myjd.configured() else interval)
+        stop_event.wait(interval)
